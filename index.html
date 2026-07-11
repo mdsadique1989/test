@@ -227,8 +227,8 @@
             <div class="err-text" data-err="pen"></div>
           </div>
           <div class="field">
-            <label for="apaar">विद्यार्थी का APAAR ID</label>
-            <input type="text" id="apaar" maxlength="20">
+            <label for="apaar">विद्यार्थी का APAAR ID <span class="req">*</span></label>
+            <input type="text" id="apaar" maxlength="20" required>
             <div class="err-text" data-err="apaar"></div>
           </div>
           <div class="field">
@@ -765,6 +765,7 @@
     req('admClass', data.admClass);
     if(document.getElementById('stream').required) req('stream', data.stream);
     if(document.getElementById('pen').required) req('pen', data.pen);
+    req('apaar', data.apaar);
     if(document.getElementById('aadhar').required) req('aadhar', data.aadhar);
     if(data.aadhar && !/^\d{12}$/.test(data.aadhar)){ setErr('aadhar','आधार संख्या 12 अंकों की होनी चाहिए।'); ok=false; }
     req('studentName', data.studentName);
@@ -817,7 +818,6 @@
       var val = (k === 'dob') ? formatDateDMY(data[k]) : data[k];
       rows += '<tr><td>'+fieldLabels[k]+'</td><td>'+(val || '—')+'</td></tr>';
     });
-    rows += '<tr><td>CWSN</td><td>'+(data.cwsn||'—')+'</td></tr>';
     var idLine = appId ? '<p style="color:#0b2f5e;font-weight:700;">Application ID: '+appId+'</p>' : '';
     return '' +
       '<button class="modal-close" onclick="document.getElementById(\'modalOverlay\').classList.remove(\'open\')">×</button>' +
@@ -840,10 +840,10 @@
     var rows = '';
     Object.keys(fieldLabels).forEach(function(k){
       if(k === 'stream' && !data.stream) return;
+      if(k === 'prevUdise' || k === 'accHolder') return; // not shown on the printed application
       var val = (k === 'dob') ? formatDateDMY(data[k]) : data[k];
       rows += '<tr><td class="l">'+fieldLabels[k]+'</td><td>'+(val || '—')+'</td></tr>';
     });
-    rows += '<tr><td class="l">CWSN</td><td>'+(data.cwsn||'—')+'</td></tr>';
     var html = '<!DOCTYPE html><html lang="hi"><head><meta charset="UTF-8">' +
       '<title>Application '+appId+'</title>' +
       '<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400;600;700&display=swap" rel="stylesheet">' +
