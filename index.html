@@ -815,6 +815,7 @@
     var rows = '';
     Object.keys(fieldLabels).forEach(function(k){
       if(k === 'stream' && !data.stream) return;
+      if(k === 'accRelation') return; // not shown in the preview
       var val = (k === 'dob') ? formatDateDMY(data[k]) : data[k];
       rows += '<tr><td>'+fieldLabels[k]+'</td><td>'+(val || '—')+'</td></tr>';
     });
@@ -840,7 +841,7 @@
     var rows = '';
     Object.keys(fieldLabels).forEach(function(k){
       if(k === 'stream' && !data.stream) return;
-      if(k === 'prevUdise' || k === 'accHolder') return; // not shown on the printed application
+      if(k === 'prevUdise' || k === 'accRelation') return; // not shown on the printed application
       var val = (k === 'dob') ? formatDateDMY(data[k]) : data[k];
       rows += '<tr><td class="l">'+fieldLabels[k]+'</td><td>'+(val || '—')+'</td></tr>';
     });
