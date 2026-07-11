@@ -1,0 +1,1034 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Online Admission Form - UHS CHOCHAHI CHHAPRA</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#0b2f5e;
+    --navy-dark:#071f42;
+    --saffron:#ff9933;
+    --green:#138808;
+    --paper:#f7f5ef;
+    --card:#ffffff;
+    --ink:#1c2430;
+    --muted:#5b6472;
+    --line:#d8dce2;
+    --error:#b3261e;
+    --focus:#0b5fff;
+    --radius:6px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:'Noto Sans Devanagari','Inter',sans-serif;
+    background:var(--paper);
+    color:var(--ink);
+    line-height:1.5;
+  }
+  .tricolor-bar{height:5px;background:linear-gradient(to right,var(--saffron) 0 33.3%, #fff 33.3% 66.6%, var(--green) 66.6% 100%);}
+  header.site-header{
+    background:linear-gradient(180deg,var(--navy) 0%, var(--navy-dark) 100%);
+    color:#fff;
+    padding:18px 20px;
+    text-align:center;
+  }
+  header.site-header .school-hi{font-size:1.5rem;font-weight:700;margin:0;}
+  header.site-header .school-en{font-size:0.95rem;font-weight:500;letter-spacing:.04em;margin:4px 0 0;opacity:.9;text-transform:uppercase;}
+  header.site-header .udise{margin-top:8px;font-size:.85rem;opacity:.85;}
+  .wrap{max-width:880px;margin:0 auto;padding:24px 16px 60px;}
+  .tabs{display:flex;gap:8px;margin-bottom:18px;border-bottom:2px solid var(--line);}
+  .tab-btn{
+    flex:1;padding:12px 8px;background:none;border:none;cursor:pointer;
+    font-family:inherit;font-size:.95rem;font-weight:600;color:var(--muted);
+    border-bottom:3px solid transparent;transition:.15s;
+  }
+  .tab-btn.active{color:var(--navy);border-bottom-color:var(--saffron);}
+  .tab-panel{display:none;}
+  .tab-panel.active{display:block;}
+  .card{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:22px 22px 26px;
+    margin-bottom:20px;
+    box-shadow:0 1px 2px rgba(20,30,60,.04);
+  }
+  .notice{
+    background:#fff7e6;border:1px solid #ffdf9e;border-radius:var(--radius);
+    padding:12px 14px;font-size:.88rem;color:#6b4d05;margin-bottom:18px;
+  }
+  .section-title{
+    font-size:1.02rem;font-weight:700;color:var(--navy);
+    margin:0 0 14px;padding-bottom:8px;border-bottom:1px solid var(--line);
+    display:flex;align-items:center;gap:8px;
+  }
+  .section-title .num{
+    display:inline-flex;align-items:center;justify-content:center;
+    width:22px;height:22px;border-radius:50%;background:var(--navy);color:#fff;
+    font-size:.72rem;font-weight:700;
+  }
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px 18px;}
+  @media (max-width:600px){.grid{grid-template-columns:1fr;}}
+  .field{display:flex;flex-direction:column;gap:5px;margin-bottom:2px;}
+  .field.full{grid-column:1/-1;}
+  label{font-size:.85rem;font-weight:600;color:var(--ink);}
+  label .req{color:var(--error);margin-left:2px;}
+  .hint{font-size:.75rem;color:var(--muted);}
+  input[type=text],input[type=number],input[type=date],input[type=tel],select,textarea{
+    padding:9px 10px;border:1px solid var(--line);border-radius:var(--radius);
+    font-family:inherit;font-size:.92rem;background:#fff;color:var(--ink);
+  }
+  input:focus,select:focus,textarea:focus{outline:2px solid var(--focus);outline-offset:1px;border-color:var(--focus);}
+  textarea{resize:vertical;min-height:64px;}
+  .radio-row{display:flex;gap:18px;flex-wrap:wrap;padding-top:4px;}
+  .radio-row label{font-weight:500;display:flex;align-items:center;gap:6px;font-size:.9rem;}
+  .err-text{font-size:.76rem;color:var(--error);min-height:14px;}
+  .upload-box{
+    display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;
+  }
+  .upload-preview{
+    width:110px;height:96px;border:1.5px dashed var(--line);border-radius:var(--radius);
+    display:flex;align-items:center;justify-content:center;font-size:.72rem;color:var(--muted);
+    text-align:center;overflow:hidden;background:#fafafa;flex-shrink:0;
+  }
+  .upload-preview.sig{width:150px;height:60px;}
+  .upload-preview img{width:100%;height:100%;object-fit:contain;}
+  .declaration-box{
+    background:#f4f6fa;border:1px solid var(--line);border-radius:var(--radius);
+    padding:14px 16px;font-size:.85rem;color:var(--ink);margin-bottom:12px;
+  }
+  .declaration-box p{margin:0 0 8px;}
+  .declaration-box p:last-child{margin-bottom:0;}
+  .agree-row{display:flex;align-items:flex-start;gap:8px;font-size:.88rem;font-weight:600;}
+  .agree-row input{margin-top:3px;}
+  .btn-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:22px;}
+  button.btn{
+    font-family:inherit;font-size:.92rem;font-weight:600;padding:11px 20px;
+    border-radius:var(--radius);border:1px solid transparent;cursor:pointer;transition:.15s;
+  }
+  .btn-primary{background:var(--navy);color:#fff;}
+  .btn-primary:hover{background:var(--navy-dark);}
+  .btn-secondary{background:#fff;color:var(--navy);border-color:var(--navy);}
+  .btn-secondary:hover{background:#eef2f8;}
+  .btn-danger{background:#fff;color:var(--error);border-color:var(--error);}
+  .btn-danger:hover{background:#fdeceb;}
+  .btn-success{background:var(--green);color:#fff;}
+  .btn-success:hover{background:#0c6e06;}
+  .modal-overlay{
+    position:fixed;inset:0;background:rgba(10,20,40,.55);display:none;
+    align-items:center;justify-content:center;padding:20px;z-index:50;
+  }
+  .modal-overlay.open{display:flex;}
+  .modal{
+    background:#fff;border-radius:8px;max-width:640px;width:100%;max-height:85vh;
+    overflow-y:auto;padding:22px 24px;box-shadow:0 10px 40px rgba(0,0,0,.3);
+  }
+  .modal h3{margin-top:0;color:var(--navy);}
+  .modal table{width:100%;border-collapse:collapse;font-size:.86rem;}
+  .modal table td{padding:6px 4px;border-bottom:1px solid var(--line);vertical-align:top;}
+  .modal table td:first-child{color:var(--muted);width:45%;}
+  .modal .photo-row{display:flex;gap:16px;margin-bottom:14px;}
+  .modal .photo-row img{border:1px solid var(--line);border-radius:4px;}
+  .modal-close{float:right;background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--muted);}
+  .success-box{
+    text-align:center;padding:26px 14px;
+  }
+  .success-box .app-id{
+    font-size:1.6rem;font-weight:700;color:var(--navy);background:#eef2f8;
+    padding:12px 18px;border-radius:var(--radius);display:inline-block;margin:10px 0;letter-spacing:.03em;
+  }
+  .toast{
+    position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
+    background:var(--navy-dark);color:#fff;padding:10px 18px;border-radius:6px;
+    font-size:.88rem;z-index:60;opacity:0;transition:opacity .25s;pointer-events:none;
+  }
+  .toast.show{opacity:1;}
+  .search-toggle{display:flex;gap:16px;margin-bottom:6px;}
+  .data-tools{
+    display:flex;gap:8px;flex-wrap:wrap;font-size:.78rem;color:var(--muted);margin-top:6px;
+  }
+  .data-tools button{
+    font-family:inherit;font-size:.76rem;padding:5px 10px;border-radius:4px;
+    border:1px solid var(--line);background:#fff;color:var(--muted);cursor:pointer;
+  }
+  footer.site-footer{
+    text-align:center;font-size:.78rem;color:var(--muted);padding:18px;
+  }
+  @media print{
+    header.site-header, .tabs, .btn-row, .data-tools, .modal-close{display:none !important;}
+    body{background:#fff;}
+  }
+</style>
+</head>
+<body>
+
+<div class="tricolor-bar"></div>
+<header class="site-header">
+  <p class="school-hi">उ.मा.वि. चोचाही छपरा, पारू, मुजफ्फरपुर</p>
+  <p class="school-en">UMV Chochahi Chhapra,Paroo, Muzaffarpur</p>
+  <p class="udise">UDISE: 10140301702 &nbsp;|&nbsp; सत्र / Session: <span id="sessionLabel"></span></p>
+</header>
+
+<div class="wrap">
+
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="apply">ऑनलाइन नामांकन प्रपत्र</button>
+    <button class="tab-btn" data-tab="download">आवेदन डाउनलोड करें</button>
+  </div>
+
+  <!-- ===================== APPLY TAB ===================== -->
+  <div class="tab-panel active" id="tab-apply">
+
+    <div class="notice">
+      आवेदन सफलतापूर्वक जमा होने के बाद <strong>Application ID</strong> सुरक्षित रखें तथा आवेदन डाउनलोड कर विद्यालय में जमा करें।
+    </div>
+
+    <form id="admissionForm" novalidate>
+
+      <!-- 1. Class -->
+      <div class="card">
+        <p class="section-title"><span class="num">1</span>नामांकन कक्षा का चयन</p>
+        <div class="grid">
+          <div class="field">
+            <label for="admClass">जिस कक्षा में नामांकन लेना है <span class="req">*</span></label>
+            <select id="admClass" required>
+              <option value="">-- कक्षा चुनें --</option>
+              <option>Class I</option><option>Class II</option><option>Class III</option>
+              <option>Class IV</option><option>Class V</option><option>Class VI</option>
+              <option>Class VII</option><option>Class VIII</option><option>Class IX</option>
+              <option>Class X</option><option>Class XI</option><option>Class XII</option>
+            </select>
+            <div class="err-text" data-err="admClass"></div>
+          </div>
+          <div class="field" id="streamField" style="display:none;">
+            <label for="stream">संकाय / Stream <span class="req">*</span></label>
+            <select id="stream">
+              <option value="">-- संकाय चुनें --</option>
+              <option>Arts</option>
+              <option>Science</option>
+            </select>
+            <div class="err-text" data-err="stream"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. Student details -->
+      <div class="card">
+        <p class="section-title"><span class="num">2</span>विद्यार्थी का विवरण</p>
+        <div class="grid">
+          <div class="field">
+            <label for="pen">विद्यार्थी का PEN संख्या <span class="req" id="penReq">*</span></label>
+            <input type="text" id="pen" maxlength="20">
+            <div class="hint">Class I के विद्यार्थियों के लिए PEN संख्या वैकल्पिक है।</div>
+            <div class="err-text" data-err="pen"></div>
+          </div>
+          <div class="field">
+            <label for="apaar">विद्यार्थी का APAAR ID</label>
+            <input type="text" id="apaar" maxlength="20">
+            <div class="err-text" data-err="apaar"></div>
+          </div>
+          <div class="field">
+            <label for="aadhar">विद्यार्थी का आधार संख्या <span class="req" id="aadharReq">*</span></label>
+            <input type="text" id="aadhar" maxlength="12" inputmode="numeric">
+            <div class="hint">Class I के विद्यार्थियों के लिए आधार संख्या वैकल्पिक है।</div>
+            <div class="err-text" data-err="aadhar"></div>
+          </div>
+          <div class="field">
+            <label for="eshiksha">विद्यार्थी का ई-शिक्षाकोष ID</label>
+            <input type="text" id="eshiksha" maxlength="20">
+            <div class="err-text" data-err="eshiksha"></div>
+          </div>
+          <div class="field">
+            <label for="studentName">विद्यार्थी का नाम <span class="req">*</span></label>
+            <input type="text" id="studentName" required>
+            <div class="err-text" data-err="studentName"></div>
+          </div>
+          <div class="field">
+            <label for="dob">जन्म तिथि <span class="req">*</span></label>
+            <input type="date" id="dob" required>
+            <div class="err-text" data-err="dob"></div>
+          </div>
+          <div class="field">
+            <label for="gender">लिंग <span class="req">*</span></label>
+            <select id="gender" required>
+              <option value="">-- लिंग चुनें --</option>
+              <option>Male</option><option>Female</option><option>Other</option>
+            </select>
+            <div class="err-text" data-err="gender"></div>
+          </div>
+          <div class="field">
+            <label for="category">सामाजिक श्रेणी <span class="req">*</span></label>
+            <select id="category" required>
+              <option value="">-- श्रेणी चुनें --</option>
+              <option>GEN</option><option>EBC</option><option>BC</option><option>SC</option><option>ST</option>
+            </select>
+            <div class="err-text" data-err="category"></div>
+          </div>
+          <div class="field">
+            <label for="religion">धर्म <span class="req">*</span></label>
+            <select id="religion" required>
+              <option value="">-- धर्म चुनें --</option>
+              <option>Hindu</option><option>Muslim</option><option>Sikh</option><option>Christian</option><option>Other</option>
+            </select>
+            <div class="err-text" data-err="religion"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. Parent details -->
+      <div class="card">
+        <p class="section-title"><span class="num">3</span>अभिभावक का विवरण</p>
+        <div class="grid">
+          <div class="field">
+            <label for="motherName">माता का नाम <span class="req">*</span></label>
+            <input type="text" id="motherName" required>
+            <div class="err-text" data-err="motherName"></div>
+          </div>
+          <div class="field">
+            <label for="fatherName">पिता का नाम <span class="req">*</span></label>
+            <input type="text" id="fatherName" required>
+            <div class="err-text" data-err="fatherName"></div>
+          </div>
+          <div class="field">
+            <label for="aadharOwner">आधार संख्या किसका है? <span class="req">*</span></label>
+            <select id="aadharOwner" required>
+              <option value="">-- चुनें --</option>
+              <option>Father</option><option>Mother</option>
+            </select>
+            <div class="err-text" data-err="aadharOwner"></div>
+          </div>
+          <div class="field">
+            <label for="guardianAadhar">अभिभावक का आधार संख्या <span class="req">*</span></label>
+            <input type="text" id="guardianAadhar" maxlength="12" inputmode="numeric" required>
+            <div class="err-text" data-err="guardianAadhar"></div>
+          </div>
+          <div class="field">
+            <label for="mobile">मोबाइल संख्या <span class="req">*</span></label>
+            <input type="tel" id="mobile" maxlength="10" inputmode="numeric" required>
+            <div class="err-text" data-err="mobile"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4. Address -->
+      <div class="card">
+        <p class="section-title"><span class="num">4</span>निवास स्थान / पता विवरण</p>
+        <div class="grid">
+          <div class="field full">
+            <label for="address">स्थायी पता <span class="req">*</span></label>
+            <textarea id="address" required></textarea>
+            <div class="err-text" data-err="address"></div>
+          </div>
+          <div class="field">
+            <label for="pincode">पिन कोड <span class="req">*</span></label>
+            <input type="text" id="pincode" maxlength="6" inputmode="numeric" required>
+            <div class="err-text" data-err="pincode"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 5. Social & health -->
+      <div class="card">
+        <p class="section-title"><span class="num">5</span>सामाजिक एवं स्वास्थ्य विवरण</p>
+        <div class="grid">
+          <div class="field">
+            <label for="distance">विद्यालय से दूरी <span class="req">*</span></label>
+            <select id="distance" required>
+              <option value="">-- दूरी चुनें --</option>
+              <option>0-1 KM</option><option>1-3 KM</option><option>3-5 KM</option><option>5+ KM</option>
+            </select>
+            <div class="err-text" data-err="distance"></div>
+          </div>
+          <div class="field">
+            <label>क्या विद्यार्थी दिव्यांग (CWSN) श्रेणी में आता/आती है? <span class="req">*</span></label>
+            <div class="radio-row">
+              <label><input type="radio" name="cwsn" value="No" required>No</label>
+              <label><input type="radio" name="cwsn" value="Yes">Yes</label>
+            </div>
+            <div class="err-text" data-err="cwsn"></div>
+          </div>
+          <div class="field">
+            <label for="income">क्या माता-पिता की वार्षिक आय ₹1.5 लाख से अधिक है? <span class="req">*</span></label>
+            <select id="income" required>
+              <option value="">-- चुनें --</option>
+              <option>Yes</option><option>No</option>
+            </select>
+            <div class="err-text" data-err="income"></div>
+          </div>
+          <div class="field">
+            <label for="bloodGroup">रक्त समूह <span class="req">*</span></label>
+            <select id="bloodGroup" required>
+              <option value="">-- चुनें --</option>
+              <option>A+</option><option>A-</option><option>B+</option><option>B-</option>
+              <option>AB+</option><option>AB-</option><option>O+</option><option>O-</option>
+            </select>
+            <div class="err-text" data-err="bloodGroup"></div>
+          </div>
+          <div class="field">
+            <label for="height">लंबाई (सेमी) <span class="req">*</span></label>
+            <input type="number" id="height" min="30" max="220" required>
+            <div class="err-text" data-err="height"></div>
+          </div>
+          <div class="field">
+            <label for="weight">वजन (किलो) <span class="req">*</span></label>
+            <input type="number" id="weight" min="5" max="200" required>
+            <div class="err-text" data-err="weight"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 6. Previous school -->
+      <div class="card">
+        <p class="section-title"><span class="num">6</span>पूर्व विद्यालय का विवरण</p>
+        <div class="grid">
+          <div class="field">
+            <label for="prevUdise">पूर्व विद्यालय का UDISE कोड <span class="req" id="prevUdiseReq">*</span></label>
+            <input type="text" id="prevUdise" maxlength="15">
+            <div class="hint">Class I के विद्यार्थियों के लिए यह विवरण वैकल्पिक है।</div>
+            <div class="err-text" data-err="prevUdise"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 7. Bank details -->
+      <div class="card">
+        <p class="section-title"><span class="num">7</span>बैंक खाता विवरण</p>
+        <div class="grid">
+          <div class="field">
+            <label for="bankAccount">बैंक खाता संख्या <span class="req">*</span></label>
+            <input type="text" id="bankAccount" required>
+            <div class="err-text" data-err="bankAccount"></div>
+          </div>
+          <div class="field">
+            <label for="ifsc">बैंक IFSC कोड <span class="req">*</span></label>
+            <input type="text" id="ifsc" maxlength="11" required>
+            <div class="err-text" data-err="ifsc"></div>
+          </div>
+          <div class="field">
+            <label for="bankName">बैंक का नाम <span class="req">*</span></label>
+            <input type="text" id="bankName" required>
+            <div class="err-text" data-err="bankName"></div>
+          </div>
+          <div class="field">
+            <label for="accHolder">खाताधारक का नाम <span class="req">*</span></label>
+            <input type="text" id="accHolder" required>
+            <div class="err-text" data-err="accHolder"></div>
+          </div>
+          <div class="field">
+            <label for="accRelation">खाताधारक का विद्यार्थी से संबंध <span class="req">*</span></label>
+            <select id="accRelation" required>
+              <option value="">-- चुनें --</option>
+              <option>Student</option><option>Father</option><option>Mother</option><option>Guardian</option>
+            </select>
+            <div class="err-text" data-err="accRelation"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 8. Declaration -->
+      <div class="card">
+        <div class="declaration-box">
+          <p>मैं, यह घोषणा करता/करती हूँ कि ऊपर दी गई सभी सूचना सही है तथा मेरा नामांकन वर्तमान में किसी अन्य निजी/सरकारी विद्यालय में नहीं है। मैं नियमित रूप से विद्यालय में उपस्थित रहूँगा/रहूँगी। 75% से कम उपस्थिति होने पर मुझे किसी भी प्रकार का सरकारी लाभ देय नहीं होगा।</p>
+          <p><strong>महत्वपूर्ण:</strong> गलत जानकारी देने पर आवेदन रद्द किया जा सकता है।</p>
+          <p>I hereby declare that all information provided is true and correct. I am not currently enrolled in any other school. Below 75% attendance disqualifies me from government benefits.</p>
+        </div>
+        <label class="agree-row">
+          <input type="checkbox" id="agree" required>
+          मैं उपरोक्त घोषणा से सहमत हूँ / I agree to the above declaration <span class="req">*</span>
+        </label>
+        <div class="err-text" data-err="agree"></div>
+      </div>
+
+      <!-- 9. Photo & signature -->
+      <div class="card">
+        <p class="section-title"><span class="num">8</span>फोटो एवं हस्ताक्षर अपलोड</p>
+        <div class="grid">
+          <div class="field">
+            <label for="photo">छात्र का फोटो <span class="req">*</span></label>
+            <div class="upload-box">
+              <div class="upload-preview" id="photoPreview">फोटो यहाँ दिखाई देगा</div>
+              <div>
+                <input type="file" id="photo" accept="image/*" required>
+                <div class="hint">पासपोर्ट आकार फोटो (3.5cm × 3.0cm), फाइल आकार 50KB–100KB<br></div>
+                <div class="hint" id="photoSizeInfo"></div>
+              </div>
+            </div>
+            <div class="err-text" data-err="photo"></div>
+          </div>
+          <div class="field">
+            <label for="signature">छात्र का हस्ताक्षर <span class="req">*</span></label>
+            <div class="upload-box">
+              <div class="upload-preview sig" id="sigPreview">हस्ताक्षर यहाँ दिखाई देगा</div>
+              <div>
+                <input type="file" id="signature" accept="image/*" required>
+                <div class="hint">हस्ताक्षर (3.5cm × 1.1cm), फाइल आकार 5KB–20KB<br></div>
+                <div class="hint" id="sigSizeInfo"></div>
+              </div>
+            </div>
+            <div class="err-text" data-err="signature"></div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="btn-row">
+        <button type="button" class="btn btn-secondary" id="previewBtn">👁 आवेदन पूर्वावलोकन</button>
+        <button type="submit" class="btn btn-primary" id="submitBtn">✅ आवेदन जमा करें</button>
+        <button type="button" class="btn btn-danger" id="clearBtn">🗑 सभी जानकारी हटाएँ</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- ===================== DOWNLOAD TAB ===================== -->
+  <div class="tab-panel" id="tab-download">
+    <div class="card">
+      <p class="section-title" style="border-bottom:none;margin-bottom:4px;">यदि आपने पहले से नामांकन प्रपत्र भर रखा है, तो आवेदन डाउनलोड कर विद्यालय में जमा करें</p>
+      <div class="grid" style="margin-top:14px;">
+        <div class="field">
+          <label for="dlClass">कक्षा <span class="req">*</span></label>
+          <select id="dlClass">
+            <option value="">-- कक्षा चुनें --</option>
+            <option>Class I</option><option>Class II</option><option>Class III</option>
+            <option>Class IV</option><option>Class V</option><option>Class VI</option>
+            <option>Class VII</option><option>Class VIII</option><option>Class IX</option>
+            <option>Class X</option><option>Class XI</option><option>Class XII</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>खोजने का प्रकार</label>
+          <div class="radio-row search-toggle">
+            <label><input type="radio" name="searchType" value="appId" checked> Application ID</label>
+            <label><input type="radio" name="searchType" value="pen"> PEN Number</label>
+          </div>
+        </div>
+        <div class="field full" id="searchByAppIdField">
+          <label for="searchAppId">Application ID</label>
+          <input type="text" id="searchAppId" placeholder="Application ID से खोजें।">
+        </div>
+        <div class="field full" id="searchByPenField" style="display:none;">
+          <label for="searchPen">PEN संख्या</label>
+          <input type="text" id="searchPen" placeholder="PEN Number से खोजें।">
+        </div>
+      </div>
+      <div class="btn-row">
+        <button type="button" class="btn btn-primary" id="downloadSearchBtn">📄 आवेदन डाउनलोड करें</button>
+      </div>
+      <div class="err-text" id="dlMsg" style="margin-top:8px;"></div>
+
+      <div class="notice" style="margin-top:20px;">
+        सभी आवेदन <strong>Google Sheet</strong> में तथा फोटो/हस्ताक्षर <strong>Google Drive</strong> फ़ोल्डर में सुरक्षित रहते हैं, इस वेबसाइट को किसी सर्वर की आवश्यकता नहीं है। कोई भी आवेदन कभी भी अपने Application ID या PEN संख्या से दोबारा डाउनलोड कर सकता है।
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<footer class="site-footer">© UMV Chochahi Chhapra, Paroo, Muzaffarpur — Online Admission System</footer>
+
+<!-- Preview / Success modal -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal" id="modalContent"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  "use strict";
+
+  // ================= BACKEND CONFIG =================
+  // Paste the Google Apps Script Web App URL here after you deploy it
+  // (Deploy > New deployment > Web app). It ends in /exec.
+  var CONFIG = {
+    WEB_APP_URL: 'https://script.google.com/macros/s/AKfycbylN0zNZ0jBEmC7YMo5nVzgceFSm27qU8iESCPSFYO_QyFBG60JC8a-lJwOLFZ47rUArQ/exec',
+    // Must match API_KEY in Code.gs. Leave both blank ('') to disable.
+    API_KEY: ''
+  };
+  function backendConfigured(){
+    return CONFIG.WEB_APP_URL && CONFIG.WEB_APP_URL.indexOf('script.google.com') !== -1;
+  }
+  // =====================================================
+
+  // ---------- Session label ----------
+  var now = new Date();
+  var y = now.getFullYear();
+  var sessionLabel = (now.getMonth() >= 3) ? (y + "-" + String(y+1).slice(-2)) : ((y-1) + "-" + String(y).slice(-2));
+  document.getElementById('sessionLabel').textContent = sessionLabel;
+
+  // ---------- Tabs ----------
+  var tabButtons = document.querySelectorAll('.tab-btn');
+  tabButtons.forEach(function(btn){
+    btn.addEventListener('click', function(){
+      tabButtons.forEach(function(b){ b.classList.remove('active'); });
+      document.querySelectorAll('.tab-panel').forEach(function(p){ p.classList.remove('active'); });
+      btn.classList.add('active');
+      document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+    });
+  });
+
+  // ---------- Helpers ----------
+  function toast(msg){
+    var t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(function(){ t.classList.remove('show'); }, 2600);
+  }
+  function setErr(field, msg){
+    var el = document.querySelector('[data-err="'+field+'"]');
+    if(el) el.textContent = msg || '';
+  }
+  function clearAllErrors(){
+    document.querySelectorAll('.err-text').forEach(function(e){ e.textContent=''; });
+  }
+  // ---------- Class I optional-field logic ----------
+  var admClassEl = document.getElementById('admClass');
+  var streamField = document.getElementById('streamField');
+  var streamEl = document.getElementById('stream');
+  function isClassOneOrAbove(){ return admClassEl.value === 'Class I'; }
+  function updateOptionalForClassOne(){
+    var isC1 = isClassOneOrAbove();
+    document.getElementById('penReq').style.display = isC1 ? 'none' : 'inline';
+    document.getElementById('aadharReq').style.display = isC1 ? 'none' : 'inline';
+    document.getElementById('prevUdiseReq').style.display = isC1 ? 'none' : 'inline';
+    document.getElementById('pen').required = !isC1;
+    document.getElementById('aadhar').required = !isC1;
+    document.getElementById('prevUdise').required = !isC1;
+
+    var isSenior = (admClassEl.value === 'Class XI' || admClassEl.value === 'Class XII');
+    streamField.style.display = isSenior ? 'flex' : 'none';
+    streamEl.required = isSenior;
+    if(!isSenior) streamEl.value = '';
+  }
+  admClassEl.addEventListener('change', updateOptionalForClassOne);
+  updateOptionalForClassOne();
+
+  // ---------- Photo / signature: auto-crop, auto-resize, auto-compress ----------
+  var photoInput = document.getElementById('photo');
+  var sigInput = document.getElementById('signature');
+  var photoPreview = document.getElementById('photoPreview');
+  var sigPreview = document.getElementById('sigPreview');
+  var photoDataUrl = null, sigDataUrl = null;
+
+  // Targets at 300 DPI (1 cm = 118.11 px)
+  // DPI increased from 300 to 400: at 300 DPI the photo target (413x354px)
+  // simply didn't have enough pixel data to hold more than ~90KB even at
+  // maximum JPEG quality. More pixels = more data the compressor can use,
+  // so it can now fill closer to the full 100KB ceiling — a sharper photo,
+  // still capped at 100KB by the same compression loop below.
+  var DPI_FACTOR = 400 / 2.54; // ≈ 157.48 px/cm
+  var PHOTO_TARGET = { w: Math.round(3.5 * DPI_FACTOR), h: Math.round(3.0 * DPI_FACTOR) }; // ~551 x 472
+  var SIG_TARGET   = { w: Math.round(3.5 * DPI_FACTOR), h: Math.round(1.1 * DPI_FACTOR) }; // ~551 x 173
+
+  // ---- Exact resize + compression logic from the provided reference file ----
+  // Stretches the image directly onto a canvas of the exact target
+  // width/height (no cropping), then iteratively adjusts JPEG quality
+  // (start 0.90, -0.05 if too big, +0.03 if too small, up to 100 attempts)
+  // until the file lands inside [minKB, maxKB].
+  function processImage(file, minKB, maxKB, targetWidth, targetHeight, previewEl, infoEl, errField, storeCb){
+    if(!file) return;
+    previewEl.innerHTML = '<p style="color:#666;">Processing...</p>';
+    if(infoEl) infoEl.textContent = '';
+    setErr(errField, '');
+
+    var reader = new FileReader();
+    reader.onload = function(event){
+      var img = new Image();
+      img.onload = function(){
+        var canvas = document.createElement('canvas');
+        var ctx = canvas.getContext('2d');
+
+        // Set standard dimensions for aspect ratio matching the form types
+        canvas.width = targetWidth;
+        canvas.height = targetHeight;
+        ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
+
+        // Iterative compression algorithm to hit the target file size range
+        var quality = 0.90;
+        var dataUrl = '';
+        var fileSizeKB = 0;
+        var attempts = 0;
+
+        do {
+          dataUrl = canvas.toDataURL('image/jpeg', quality);
+          var stringLength = dataUrl.split(',')[1].length;
+          fileSizeKB = (stringLength * 3 / 4) / 1024; // Base64 to KB estimation
+
+          if(fileSizeKB > maxKB){
+            quality -= 0.05; // Too large, reduce quality
+          } else if(fileSizeKB < minKB){
+            quality += 0.03; // Too small, try pushing up quality (within limits)
+          }
+          attempts++;
+        } while((fileSizeKB < minKB || fileSizeKB > maxKB) && quality > 0.05 && quality < 1.0 && attempts < 100);
+
+        // Display result
+        previewEl.innerHTML = '';
+        var resultImg = document.createElement('img');
+        resultImg.src = dataUrl;
+        resultImg.style.maxWidth = '100%';
+        resultImg.style.maxHeight = '140px';
+        resultImg.style.objectFit = 'contain';
+        previewEl.appendChild(resultImg);
+
+        if(infoEl){
+          infoEl.textContent = 'Generated Size: ' + fileSizeKB.toFixed(2) + ' KB (' + targetWidth + '×' + targetHeight + ' px)' +
+            (fileSizeKB >= minKB && fileSizeKB <= maxKB ? ' ✅' : '');
+          infoEl.style.color = (fileSizeKB >= minKB && fileSizeKB <= maxKB) ? '#138808' : '#b3261e';
+        }
+        if(fileSizeKB < minKB || fileSizeKB > maxKB){
+          setErr(errField, 'Could not compress perfectly to range. Current: ' + fileSizeKB.toFixed(2) + ' KB. Try a different source image.');
+        }
+        storeCb(dataUrl);
+      };
+      img.onerror = function(){
+        setErr(errField, 'यह फाइल एक मान्य चित्र (image) नहीं है। कृपया दूसरी फाइल चुनें।');
+        previewEl.textContent = 'अमान्य फाइल';
+        storeCb(null);
+      };
+      img.src = event.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  photoInput.addEventListener('change', function(){
+    if(photoInput.files[0])
+      processImage(photoInput.files[0], 50, 100, PHOTO_TARGET.w, PHOTO_TARGET.h, photoPreview, document.getElementById('photoSizeInfo'), 'photo', function(url){ photoDataUrl = url; });
+  });
+  sigInput.addEventListener('change', function(){
+    if(sigInput.files[0])
+      processImage(sigInput.files[0], 5, 20, SIG_TARGET.w, SIG_TARGET.h, sigPreview, document.getElementById('sigSizeInfo'), 'signature', function(url){ sigDataUrl = url; });
+  });
+
+  // ---------- CWSN radio helper for reading value ----------
+  function getRadioValue(name){
+    var el = document.querySelector('input[name="'+name+'"]:checked');
+    return el ? el.value : '';
+  }
+
+  // ---------- Date formatting helper (dd/mm/yyyy) ----------
+  function formatDateDMY(value){
+    if(!value) return '';
+    var str = String(value).trim();
+    var iso = str.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if(iso) return iso[3] + '/' + iso[2] + '/' + iso[1];
+    var dmy = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if(dmy) return str; // already dd/mm/yyyy
+    var d = new Date(str);
+    if(!isNaN(d.getTime())){
+      var dd = String(d.getDate()).padStart(2, '0');
+      var mm = String(d.getMonth() + 1).padStart(2, '0');
+      var yyyy = d.getFullYear();
+      return dd + '/' + mm + '/' + yyyy;
+    }
+    return str;
+  }
+
+  // ---------- Field label map (for preview/print) ----------
+  var fieldLabels = {
+    admClass:'नामांकन कक्षा', stream:'संकाय / Stream',
+    pen:'PEN संख्या', apaar:'APAAR ID', aadhar:'आधार संख्या', eshiksha:'ई-शिक्षाकोष ID',
+    studentName:'विद्यार्थी का नाम', dob:'जन्म तिथि', gender:'लिंग', category:'सामाजिक श्रेणी', religion:'धर्म',
+    motherName:'माता का नाम', fatherName:'पिता का नाम', aadharOwner:'आधार किसका', guardianAadhar:'अभिभावक आधार संख्या', mobile:'मोबाइल संख्या',
+    address:'स्थायी पता', pincode:'पिन कोड',
+    distance:'विद्यालय से दूरी', cwsn:'CWSN', income:'वार्षिक आय > 1.5 लाख', bloodGroup:'रक्त समूह', height:'लंबाई (सेमी)', weight:'वजन (किलो)',
+    prevUdise:'पूर्व विद्यालय UDISE कोड',
+    bankAccount:'बैंक खाता संख्या', ifsc:'IFSC कोड', bankName:'बैंक का नाम', accHolder:'खाताधारक का नाम', accRelation:'खाताधारक का संबंध'
+  };
+
+  function collectFormData(){
+    var data = {};
+    ['admClass','stream','pen','apaar','aadhar','eshiksha','studentName','dob','gender','category','religion',
+     'motherName','fatherName','aadharOwner','guardianAadhar','mobile','address','pincode',
+     'distance','income','bloodGroup','height','weight','prevUdise',
+     'bankAccount','ifsc','bankName','accHolder','accRelation'].forEach(function(id){
+      var el = document.getElementById(id);
+      data[id] = el ? el.value.trim() : '';
+    });
+    data.cwsn = getRadioValue('cwsn');
+    data.agree = document.getElementById('agree').checked;
+    data.photo = photoDataUrl;
+    data.signature = sigDataUrl;
+    return data;
+  }
+
+  // ---------- Validation ----------
+  function validateForm(data){
+    clearAllErrors();
+    var ok = true;
+    function req(id, val){
+      if(!val){ setErr(id, 'यह फ़ील्ड आवश्यक है।'); ok = false; }
+    }
+    req('admClass', data.admClass);
+    if(document.getElementById('stream').required) req('stream', data.stream);
+    if(document.getElementById('pen').required) req('pen', data.pen);
+    if(document.getElementById('aadhar').required) req('aadhar', data.aadhar);
+    if(data.aadhar && !/^\d{12}$/.test(data.aadhar)){ setErr('aadhar','आधार संख्या 12 अंकों की होनी चाहिए।'); ok=false; }
+    req('studentName', data.studentName);
+    req('dob', data.dob);
+    req('gender', data.gender);
+    req('category', data.category);
+    req('religion', data.religion);
+    req('motherName', data.motherName);
+    req('fatherName', data.fatherName);
+    req('aadharOwner', data.aadharOwner);
+    req('guardianAadhar', data.guardianAadhar);
+    if(data.guardianAadhar && !/^\d{12}$/.test(data.guardianAadhar)){ setErr('guardianAadhar','आधार संख्या 12 अंकों की होनी चाहिए।'); ok=false; }
+    req('mobile', data.mobile);
+    if(data.mobile && !/^\d{10}$/.test(data.mobile)){ setErr('mobile','मोबाइल संख्या 10 अंकों की होनी चाहिए।'); ok=false; }
+    req('address', data.address);
+    req('pincode', data.pincode);
+    if(data.pincode && !/^\d{6}$/.test(data.pincode)){ setErr('pincode','पिन कोड 6 अंकों का होना चाहिए।'); ok=false; }
+    req('distance', data.distance);
+    if(!data.cwsn){ setErr('cwsn','यह फ़ील्ड आवश्यक है।'); ok=false; }
+    req('income', data.income);
+    req('bloodGroup', data.bloodGroup);
+    req('height', data.height);
+    req('weight', data.weight);
+    if(document.getElementById('prevUdise').required) req('prevUdise', data.prevUdise);
+    req('bankAccount', data.bankAccount);
+    req('ifsc', data.ifsc);
+    req('bankName', data.bankName);
+    req('accHolder', data.accHolder);
+    req('accRelation', data.accRelation);
+    if(!data.agree){ setErr('agree','कृपया घोषणा से सहमत हों।'); ok=false; }
+    if(!data.photo){ setErr('photo','कृपया छात्र का फोटो अपलोड करें।'); ok=false; }
+    if(!data.signature){ setErr('signature','कृपया छात्र का हस्ताक्षर अपलोड करें।'); ok=false; }
+    return ok;
+  }
+
+  // ---------- Modal ----------
+  function openModal(html){
+    document.getElementById('modalContent').innerHTML = html;
+    document.getElementById('modalOverlay').classList.add('open');
+  }
+  function closeModal(){ document.getElementById('modalOverlay').classList.remove('open'); }
+  document.getElementById('modalOverlay').addEventListener('click', function(e){
+    if(e.target === this) closeModal();
+  });
+
+  function buildPreviewHtml(data, appId){
+    var rows = '';
+    Object.keys(fieldLabels).forEach(function(k){
+      if(k === 'stream' && !data.stream) return;
+      var val = (k === 'dob') ? formatDateDMY(data[k]) : data[k];
+      rows += '<tr><td>'+fieldLabels[k]+'</td><td>'+(val || '—')+'</td></tr>';
+    });
+    rows += '<tr><td>CWSN</td><td>'+(data.cwsn||'—')+'</td></tr>';
+    var idLine = appId ? '<p style="color:#0b2f5e;font-weight:700;">Application ID: '+appId+'</p>' : '';
+    return '' +
+      '<button class="modal-close" onclick="document.getElementById(\'modalOverlay\').classList.remove(\'open\')">×</button>' +
+      '<h3>आवेदन पूर्वावलोकन</h3>' + idLine +
+      '<div class="photo-row">' +
+        (data.photo ? '<img src="'+data.photo+'" style="width:90px;height:76px;object-fit:contain;">' : '') +
+        (data.signature ? '<img src="'+data.signature+'" style="width:130px;height:50px;object-fit:contain;">' : '') +
+      '</div>' +
+      '<table>'+rows+'</table>';
+  }
+
+  document.getElementById('previewBtn').addEventListener('click', function(){
+    var data = collectFormData();
+    openModal(buildPreviewHtml(data, null));
+  });
+
+  // ---------- Printable full application (used for download) ----------
+  function buildPrintableApplication(data, appId){
+    var win = window.open('', '_blank');
+    var rows = '';
+    Object.keys(fieldLabels).forEach(function(k){
+      if(k === 'stream' && !data.stream) return;
+      var val = (k === 'dob') ? formatDateDMY(data[k]) : data[k];
+      rows += '<tr><td class="l">'+fieldLabels[k]+'</td><td>'+(val || '—')+'</td></tr>';
+    });
+    rows += '<tr><td class="l">CWSN</td><td>'+(data.cwsn||'—')+'</td></tr>';
+    var html = '<!DOCTYPE html><html lang="hi"><head><meta charset="UTF-8">' +
+      '<title>Application '+appId+'</title>' +
+      '<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400;600;700&display=swap" rel="stylesheet">' +
+      '<style>' +
+      'body{font-family:"Noto Sans Devanagari",sans-serif;max-width:760px;margin:30px auto;color:#1c2430;}' +
+      'h1{font-size:1.2rem;text-align:center;margin:0;color:#0b2f5e;}' +
+      'h2{font-size:.95rem;text-align:center;margin:4px 0 2px;color:#0b2f5e;}' +
+      '.udise{text-align:center;font-size:.8rem;color:#5b6472;margin-bottom:14px;}' +
+      '.appid{text-align:center;font-weight:700;font-size:1.1rem;background:#eef2f8;padding:8px;border-radius:6px;margin-bottom:16px;}' +
+      'table{width:100%;border-collapse:collapse;font-size:.85rem;}' +
+      'td{padding:6px 8px;border:1px solid #d8dce2;}' +
+      'td.l{background:#f7f5ef;font-weight:600;width:42%;}' +
+      '.photos{display:flex;gap:16px;justify-content:center;margin:16px 0;}' +
+      '.photos img{border:1px solid #d8dce2;}' +
+      '.decl{font-size:.78rem;color:#444;margin-top:16px;line-height:1.5;}' +
+      '.sign-area{display:flex;justify-content:space-between;margin-top:50px;font-size:.85rem;}' +
+      '@media print{.no-print{display:none;}}' +
+      '</style></head><body>' +
+      '<h1>उ.मा.वि. कपरपुरा, काँटी, मुजफ्फरपुर</h1>' +
+      '<h2>UCHCH MADHYAMIK VIDYALAYA KAPARPURA, KANTI, MUZAFFARPUR</h2>' +
+      '<div class="udise">UDISE: 10140616812</div>' +
+      '<div class="appid">Application ID: '+appId+'</div>' +
+      '<div class="photos">' +
+        (data.photo ? '<img src="'+data.photo+'" style="width:105px;height:90px;object-fit:contain;">' : '') +
+        (data.signature ? '<img src="'+data.signature+'" style="width:150px;height:55px;object-fit:contain;">' : '') +
+      '</div>' +
+      '<table>'+rows+'</table>' +
+      '<div class="decl">मैं यह घोषणा करता/करती हूँ कि ऊपर दी गई सभी सूचना सही है। I hereby declare that all information provided above is true and correct.</div>' +
+      '<div class="sign-area"><span>अभिभावक हस्ताक्षर</span><span>विद्यार्थी हस्ताक्षर</span><span>विद्यालय मोहर / प्रधानाध्यापक</span></div>' +
+      '<div class="no-print" style="text-align:center;margin-top:24px;"><button onclick="window.print()" style="padding:8px 16px;">Print / Save as PDF</button></div>' +
+      '</body></html>';
+    win.document.write(html);
+    win.document.close();
+  }
+
+  // ---------- Submit ----------
+  document.getElementById('admissionForm').addEventListener('submit', function(e){
+    e.preventDefault();
+    var data = collectFormData();
+    if(!validateForm(data)){
+      toast('कृपया लाल रंग में दिखाए गए फ़ील्ड ठीक करें।');
+      var firstErr = document.querySelector('.err-text:not(:empty)');
+      if(firstErr) firstErr.scrollIntoView({behavior:'smooth', block:'center'});
+      return;
+    }
+    if(!backendConfigured()){
+      toast('बैकएंड अभी कॉन्फ़िगर नहीं है — index.html में CONFIG.WEB_APP_URL भरें।');
+      return;
+    }
+    submitApplication(data);
+  });
+
+  function submitApplication(data){
+    var submitBtn = document.getElementById('submitBtn');
+    submitBtn.disabled = true;
+    var originalLabel = submitBtn.textContent;
+    submitBtn.textContent = '⏳ जमा हो रहा है...';
+
+    var payload = Object.assign({ action: 'submit', apiKey: CONFIG.API_KEY }, data);
+
+    fetch(CONFIG.WEB_APP_URL, { method: 'POST', body: JSON.stringify(payload) })
+      .then(function(res){ return res.json(); })
+      .then(function(result){
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalLabel;
+        if(!result.success){
+          toast('त्रुटि: ' + (result.error || 'आवेदन जमा नहीं हो सका।'));
+          return;
+        }
+        onSubmitSuccess(data, result);
+      })
+      .catch(function(){
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalLabel;
+        toast('नेटवर्क त्रुटि: आवेदन जमा नहीं हो सका। कृपया पुनः प्रयास करें।');
+      });
+  }
+
+  function onSubmitSuccess(data, result){
+    var appId = result.applicationId;
+    var record = Object.assign({}, data, {
+      photo: result.photoUrl || data.photo,
+      signature: result.signatureUrl || data.signature
+    });
+
+    openModal(
+      '<button class="modal-close" onclick="document.getElementById(\'modalOverlay\').classList.remove(\'open\')">×</button>' +
+      '<div class="success-box">' +
+        '<div style="font-size:2rem;">✅</div>' +
+        '<h3>आवेदन सफलतापूर्वक जमा हुआ!</h3>' +
+        '<div class="app-id">'+appId+'</div>' +
+        '<p style="color:#5b6472;font-size:.85rem;">इस Application ID को सुरक्षित रखें। आवेदन डाउनलोड कर विद्यालय में जमा करें।</p>' +
+        '<div class="btn-row" style="justify-content:center;">' +
+          '<button type="button" class="btn btn-success" id="downloadNowBtn">📄 आवेदन डाउनलोड करें</button>' +
+        '</div>' +
+      '</div>'
+    );
+    document.getElementById('downloadNowBtn').addEventListener('click', function(){
+      buildPrintableApplication(record, appId);
+    });
+    toast('आवेदन जमा हो गया — Application ID: '+appId);
+  }
+
+  // ---------- Clear ----------
+  document.getElementById('clearBtn').addEventListener('click', function(){
+    if(!confirm('सभी जानकारी हटाना चाहते हैं?')) return;
+    document.getElementById('admissionForm').reset();
+    photoDataUrl = null; sigDataUrl = null;
+    photoPreview.innerHTML = 'फोटो यहाँ दिखाई देगा';
+    sigPreview.innerHTML = 'हस्ताक्षर यहाँ दिखाई देगा';
+    document.getElementById('photoSizeInfo').textContent = '';
+    document.getElementById('sigSizeInfo').textContent = '';
+    clearAllErrors();
+    updateOptionalForClassOne();
+    toast('सभी जानकारी हटा दी गई।');
+  });
+
+  // ---------- Download tab: search toggle ----------
+  document.querySelectorAll('input[name="searchType"]').forEach(function(r){
+    r.addEventListener('change', function(){
+      var byId = document.querySelector('input[name="searchType"]:checked').value === 'appId';
+      document.getElementById('searchByAppIdField').style.display = byId ? 'block' : 'none';
+      document.getElementById('searchByPenField').style.display = byId ? 'none' : 'block';
+    });
+  });
+
+  document.getElementById('downloadSearchBtn').addEventListener('click', function(){
+    var dlMsg = document.getElementById('dlMsg');
+    dlMsg.textContent = '';
+    var cls = document.getElementById('dlClass').value;
+    if(!cls){ dlMsg.textContent = 'कृपया कक्षा चुनें।'; return; }
+    var byId = document.querySelector('input[name="searchType"]:checked').value === 'appId';
+    var val = (byId ? document.getElementById('searchAppId').value : document.getElementById('searchPen').value).trim();
+    if(!val){ dlMsg.textContent = 'कृपया खोज मान दर्ज करें।'; return; }
+    if(!backendConfigured()){
+      dlMsg.textContent = 'बैकएंड अभी कॉन्फ़िगर नहीं है — index.html में CONFIG.WEB_APP_URL भरें।';
+      return;
+    }
+
+    var btn = document.getElementById('downloadSearchBtn');
+    btn.disabled = true;
+    var original = btn.textContent;
+    btn.textContent = '⏳ खोज रहे हैं...';
+
+    var url = CONFIG.WEB_APP_URL +
+      '?action=search&class=' + encodeURIComponent(cls) +
+      '&type=' + encodeURIComponent(byId ? 'appId' : 'pen') +
+      '&value=' + encodeURIComponent(val) +
+      '&apiKey=' + encodeURIComponent(CONFIG.API_KEY);
+
+    fetch(url)
+      .then(function(res){ return res.json(); })
+      .then(function(result){
+        btn.disabled = false;
+        btn.textContent = original;
+        if(result.error){
+          dlMsg.textContent = 'त्रुटि: ' + result.error;
+          return;
+        }
+        if(!result.found){
+          dlMsg.textContent = 'कोई आवेदन नहीं मिला। कृपया कक्षा और खोज मान जाँच लें।';
+          return;
+        }
+        var r = result.record;
+        buildPrintableApplication({
+          admClass: r.admClass, stream: r.stream, pen: r.pen, apaar: r.apaar,
+          aadhar: r.aadhar, eshiksha: r.eshiksha, studentName: r.studentName,
+          dob: r.dob, gender: r.gender, category: r.category, religion: r.religion,
+          motherName: r.motherName, fatherName: r.fatherName, aadharOwner: r.aadharOwner,
+          guardianAadhar: r.guardianAadhar, mobile: r.mobile, address: r.address,
+          pincode: r.pincode, distance: r.distance, cwsn: r.cwsn, income: r.income,
+          bloodGroup: r.bloodGroup, height: r.height, weight: r.weight,
+          prevUdise: r.prevUdise, bankAccount: r.bankAccount, ifsc: r.ifsc,
+          bankName: r.bankName, accHolder: r.accHolder, accRelation: r.accRelation,
+          photo: r.photoUrl, signature: r.signatureUrl
+        }, r.applicationId);
+      })
+      .catch(function(){
+        btn.disabled = false;
+        btn.textContent = original;
+        dlMsg.textContent = 'नेटवर्क त्रुटि: खोज नहीं हो सकी। कृपया पुनः प्रयास करें।';
+      });
+  });
+
+})();
+</script>
+</body>
+</html>

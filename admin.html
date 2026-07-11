@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Dashboard - UHS CHOCHAHI CHHAPRA Admissions</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#0b2f5e; --navy-dark:#071f42; --paper:#f7f5ef; --card:#ffffff;
+    --ink:#1c2430; --muted:#5b6472; --line:#d8dce2; --error:#b3261e; --green:#138808;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:'Noto Sans Devanagari','Inter',sans-serif;background:var(--paper);color:var(--ink);}
+  header{background:linear-gradient(180deg,var(--navy),var(--navy-dark));color:#fff;padding:16px 20px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;}
+  header h1{font-size:1.15rem;margin:0;}
+  header .who{font-size:.82rem;opacity:.85;}
+  .wrap{max-width:1200px;margin:0 auto;padding:20px 16px 60px;}
+  .signin-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;gap:16px;text-align:center;}
+  .signin-screen p{color:var(--muted);max-width:420px;}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:18px;margin-bottom:16px;}
+  .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px;}
+  .toolbar input[type=text]{flex:1;min-width:180px;padding:9px 10px;border:1px solid var(--line);border-radius:6px;font-family:inherit;}
+  .toolbar select{padding:9px 10px;border:1px solid var(--line);border-radius:6px;font-family:inherit;}
+  button{font-family:inherit;font-size:.86rem;font-weight:600;padding:9px 14px;border-radius:6px;border:1px solid transparent;cursor:pointer;}
+  .btn-primary{background:var(--navy);color:#fff;}
+  .btn-secondary{background:#fff;color:var(--navy);border-color:var(--navy);}
+  .btn-danger{background:#fff;color:var(--error);border-color:var(--error);}
+  .btn-sm{padding:5px 10px;font-size:.78rem;}
+  table{width:100%;border-collapse:collapse;font-size:.85rem;}
+  th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap;}
+  th{background:#f4f6fa;color:var(--navy);position:sticky;top:0;}
+  tbody tr:hover{background:#fafbfd;}
+  .table-scroll{overflow-x:auto;max-height:65vh;overflow-y:auto;border:1px solid var(--line);border-radius:6px;}
+  .count-badge{font-size:.8rem;color:var(--muted);margin-bottom:8px;}
+  .modal-overlay{position:fixed;inset:0;background:rgba(10,20,40,.55);display:none;align-items:center;justify-content:center;padding:20px;z-index:50;}
+  .modal-overlay.open{display:flex;}
+  .modal{background:#fff;border-radius:8px;max-width:640px;width:100%;max-height:85vh;overflow-y:auto;padding:20px 22px;}
+  .modal table td{white-space:normal;}
+  .modal table td:first-child{color:var(--muted);width:42%;font-weight:600;}
+  .modal-close{float:right;background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--muted);}
+  .photo-row{display:flex;gap:14px;margin-bottom:12px;}
+  .photo-row img{border:1px solid var(--line);border-radius:4px;}
+  .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--navy-dark);color:#fff;padding:10px 18px;border-radius:6px;font-size:.85rem;z-index:60;opacity:0;transition:opacity .25s;}
+  .toast.show{opacity:1;}
+  .unauth-box{max-width:420px;margin:60px auto;text-align:center;}
+  .hidden{display:none !important;}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🔐 UHS CHOCHAHI CHHAPRA — Admissions Admin Dashboard</h1>
+  <div id="headerRight" class="hidden">
+    <button class="btn-secondary btn-sm" id="signOutBtn" style="margin-left:10px;">Log out</button>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <!-- Password login screen -->
+  <div class="signin-screen" id="signinScreen">
+    <p>यह डैशबोर्ड केवल अधिकृत स्टाफ के लिए है। कृपया एडमिन पासवर्ड दर्ज करें।<br>This dashboard is staff-only. Please enter the admin password.</p>
+    <form id="loginForm" style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;">
+      <input type="password" id="passwordInput" placeholder="Admin password" autocomplete="current-password"
+        style="padding:10px 12px;border:1px solid var(--line);border-radius:6px;font-family:inherit;min-width:220px;">
+      <button type="submit" class="btn-primary">लॉगिन / Login</button>
+    </form>
+    <div id="unauthMsg" class="hidden">
+      <div class="unauth-box">
+        <p style="color:var(--error);font-weight:600;">पासवर्ड गलत है / Incorrect password.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dashboard (shown after successful login) -->
+  <div id="dashboard" class="hidden">
+    <div class="card">
+      <div class="toolbar">
+        <input type="text" id="searchBox" placeholder="नाम, Application ID, PEN, मोबाइल से खोजें...">
+        <select id="classFilter">
+          <option value="">सभी कक्षाएँ</option>
+          <option>Class I</option><option>Class II</option><option>Class III</option>
+          <option>Class IV</option><option>Class V</option><option>Class VI</option>
+          <option>Class VII</option><option>Class VIII</option><option>Class IX</option>
+          <option>Class X</option><option>Class XI</option><option>Class XII</option>
+        </select>
+        <button class="btn-secondary" id="refreshBtn">🔄 रिफ्रेश</button>
+        <button class="btn-secondary" id="exportCsvBtn">⬇ CSV एक्सपोर्ट</button>
+      </div>
+      <div class="count-badge" id="countBadge"></div>
+      <div class="table-scroll">
+        <table id="dataTable">
+          <thead>
+            <tr>
+              <th>Application ID</th><th>कक्षा</th><th>विद्यार्थी का नाम</th>
+              <th>PEN</th><th>मोबाइल</th><th>जमा तिथि</th><th>कार्य</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal" id="modalContent"></div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  "use strict";
+
+  // ================= CONFIG =================
+  var CONFIG = {
+    WEB_APP_URL: 'https://script.google.com/macros/s/AKfycbylN0zNZ0jBEmC7YMo5nVzgceFSm27qU8iESCPSFYO_QyFBG60JC8a-lJwOLFZ47rUArQ/exec'
+  };
+  // ============================================
+
+  var adminPassword = null;
+  var allRecords = [];
+
+  var fieldLabels = {
+    admClass:'नामांकन कक्षा', stream:'संकाय / Stream',
+    pen:'PEN संख्या', apaar:'APAAR ID', aadhar:'आधार संख्या', eshiksha:'ई-शिक्षाकोष ID',
+    studentName:'विद्यार्थी का नाम', dob:'जन्म तिथि', gender:'लिंग', category:'सामाजिक श्रेणी', religion:'धर्म',
+    motherName:'माता का नाम', fatherName:'पिता का नाम', aadharOwner:'आधार किसका', guardianAadhar:'अभिभावक आधार संख्या', mobile:'मोबाइल संख्या',
+    address:'स्थायी पता', pincode:'पिन कोड',
+    distance:'विद्यालय से दूरी', cwsn:'CWSN', income:'वार्षिक आय > 1.5 लाख', bloodGroup:'रक्त समूह', height:'लंबाई (सेमी)', weight:'वजन (किलो)',
+    prevUdise:'पूर्व विद्यालय UDISE कोड',
+    bankAccount:'बैंक खाता संख्या', ifsc:'IFSC कोड', bankName:'बैंक का नाम', accHolder:'खाताधारक का नाम', accRelation:'खाताधारक का संबंध'
+  };
+
+  // ---------- Date formatting helper (dd/mm/yyyy) ----------
+  function formatDateDMY(value){
+    if(!value) return '';
+    var str = String(value).trim();
+    var iso = str.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if(iso){
+      var rest = str.slice(iso[0].length).trim();
+      var timeMatch = rest.match(/(\d{1,2}:\d{2}(:\d{2})?\s*(AM|PM|am|pm)?)/);
+      var datePart = iso[3] + '/' + iso[2] + '/' + iso[1];
+      return timeMatch ? datePart + ' ' + timeMatch[0] : datePart;
+    }
+    var dmy = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+    if(dmy) return str; // already dd/mm/yyyy
+    var d = new Date(str);
+    if(!isNaN(d.getTime())){
+      var dd = String(d.getDate()).padStart(2, '0');
+      var mm = String(d.getMonth() + 1).padStart(2, '0');
+      var yyyy = d.getFullYear();
+      var hh = d.getHours(), mi = String(d.getMinutes()).padStart(2, '0');
+      var ampm = hh >= 12 ? 'PM' : 'AM';
+      var hh12 = hh % 12; if(hh12 === 0) hh12 = 12;
+      return dd + '/' + mm + '/' + yyyy + ' ' + hh12 + ':' + mi + ' ' + ampm;
+    }
+    return str;
+  }
+
+  function toast(msg){
+    var t = document.getElementById('toast');
+    t.textContent = msg; t.classList.add('show');
+    setTimeout(function(){ t.classList.remove('show'); }, 2800);
+  }
+
+  // ---------- Password login ----------
+  document.getElementById('loginForm').addEventListener('submit', function(e){
+    e.preventDefault();
+    var pw = document.getElementById('passwordInput').value;
+    if(!pw) return;
+    adminPassword = pw;
+    loadApplications();
+  });
+
+  document.getElementById('signOutBtn').addEventListener('click', function(){
+    adminPassword = null;
+    allRecords = [];
+    document.getElementById('passwordInput').value = '';
+    document.getElementById('dashboard').classList.add('hidden');
+    document.getElementById('signinScreen').classList.remove('hidden');
+    document.getElementById('headerRight').classList.add('hidden');
+  });
+
+  // ---------- Load data from backend ----------
+  function loadApplications(){
+    fetch(CONFIG.WEB_APP_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'adminList', password: adminPassword })
+    })
+      .then(function(res){ return res.json(); })
+      .then(function(result){
+        if(!result.success){
+          document.getElementById('unauthMsg').classList.remove('hidden');
+          adminPassword = null;
+          return;
+        }
+        document.getElementById('unauthMsg').classList.add('hidden');
+        allRecords = result.records;
+        document.getElementById('signinScreen').classList.add('hidden');
+        document.getElementById('dashboard').classList.remove('hidden');
+        document.getElementById('headerRight').classList.remove('hidden');
+        renderTable();
+      })
+      .catch(function(){
+        toast('नेटवर्क त्रुटि — डेटा लोड नहीं हो सका।');
+      });
+  }
+
+  document.getElementById('refreshBtn').addEventListener('click', loadApplications);
+
+  // ---------- Search / filter ----------
+  function matchesFilter(r, q, cls){
+    if(cls && r.admClass !== cls) return false;
+    if(!q) return true;
+    q = q.toLowerCase();
+    return ['applicationId','studentName','pen','mobile'].some(function(k){
+      return String(r[k] || '').toLowerCase().indexOf(q) !== -1;
+    });
+  }
+
+  function renderTable(){
+    var q = document.getElementById('searchBox').value.trim();
+    var cls = document.getElementById('classFilter').value;
+    var filtered = allRecords.filter(function(r){ return matchesFilter(r, q, cls); });
+
+    document.getElementById('countBadge').textContent =
+      filtered.length + ' आवेदन दिखाए जा रहे हैं (कुल ' + allRecords.length + ' में से)';
+
+    var body = document.getElementById('tableBody');
+    body.innerHTML = '';
+    filtered.forEach(function(r){
+      var tr = document.createElement('tr');
+      tr.innerHTML =
+        '<td>'+(r.applicationId||'')+'</td>' +
+        '<td>'+(r.admClass||'')+'</td>' +
+        '<td>'+(r.studentName||'')+'</td>' +
+        '<td>'+(r.pen||'')+'</td>' +
+        '<td>'+(r.mobile||'')+'</td>' +
+        '<td>'+formatDateDMY(r.submittedAt)+'</td>' +
+        '<td></td>';
+      var actionsTd = tr.lastElementChild;
+
+      var viewBtn = document.createElement('button');
+      viewBtn.className = 'btn-secondary btn-sm';
+      viewBtn.textContent = 'देखें';
+      viewBtn.addEventListener('click', function(){ openViewModal(r); });
+      actionsTd.appendChild(viewBtn);
+
+      actionsTd.appendChild(document.createTextNode(' '));
+
+      var delBtn = document.createElement('button');
+      delBtn.className = 'btn-danger btn-sm';
+      delBtn.textContent = 'हटाएँ';
+      delBtn.addEventListener('click', function(){ deleteRecord(r); });
+      actionsTd.appendChild(delBtn);
+
+      body.appendChild(tr);
+    });
+  }
+  document.getElementById('searchBox').addEventListener('input', renderTable);
+  document.getElementById('classFilter').addEventListener('change', renderTable);
+
+  // ---------- View modal ----------
+  function openViewModal(r){
+    var rows = '';
+    Object.keys(fieldLabels).forEach(function(k){
+      if(k === 'stream' && !r.stream) return;
+      var val = (k === 'dob') ? formatDateDMY(r[k]) : r[k];
+      rows += '<tr><td>'+fieldLabels[k]+'</td><td>'+(val || '—')+'</td></tr>';
+    });
+    var html =
+      '<button class="modal-close" onclick="document.getElementById(\'modalOverlay\').classList.remove(\'open\')">×</button>' +
+      '<h3 style="color:var(--navy);margin-top:0;">'+(r.applicationId||'')+'</h3>' +
+      '<div class="photo-row">' +
+        (r.photoUrl ? '<img src="'+r.photoUrl+'" style="width:90px;height:76px;object-fit:contain;">' : '') +
+        (r.signatureUrl ? '<img src="'+r.signatureUrl+'" style="width:130px;height:50px;object-fit:contain;">' : '') +
+      '</div>' +
+      '<table>'+rows+'</table>';
+    document.getElementById('modalContent').innerHTML = html;
+    document.getElementById('modalOverlay').classList.add('open');
+  }
+  document.getElementById('modalOverlay').addEventListener('click', function(e){
+    if(e.target === this) this.classList.remove('open');
+  });
+
+  // ---------- Delete ----------
+  function deleteRecord(r){
+    if(!confirm('क्या आप वाकई "' + r.studentName + '" (' + r.applicationId + ') का आवेदन स्थायी रूप से हटाना चाहते हैं?')) return;
+    fetch(CONFIG.WEB_APP_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'adminDelete', password: adminPassword, row: r._row, applicationId: r.applicationId })
+    })
+      .then(function(res){ return res.json(); })
+      .then(function(result){
+        if(!result.success){
+          toast('त्रुटि: ' + (result.error || 'हटाया नहीं जा सका।'));
+          return;
+        }
+        toast('आवेदन हटा दिया गया।');
+        loadApplications();
+      })
+      .catch(function(){ toast('नेटवर्क त्रुटि — हटाया नहीं जा सका।'); });
+  }
+
+  // ---------- CSV export (current filtered view) ----------
+  document.getElementById('exportCsvBtn').addEventListener('click', function(){
+    var q = document.getElementById('searchBox').value.trim();
+    var cls = document.getElementById('classFilter').value;
+    var filtered = allRecords.filter(function(r){ return matchesFilter(r, q, cls); });
+    if(filtered.length === 0){ toast('एक्सपोर्ट के लिए कोई डेटा नहीं है।'); return; }
+
+    var cols = Object.keys(filtered[0]).filter(function(k){ return k !== '_row'; });
+    var lines = [cols.join(',')];
+    filtered.forEach(function(r){
+      lines.push(cols.map(function(c){
+        var v = String(r[c] === undefined ? '' : r[c]).replace(/"/g, '""');
+        return '"' + v + '"';
+      }).join(','));
+    });
+    var blob = new Blob([lines.join('\n')], { type: 'text/csv' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'uhsk-admissions-' + Date.now() + '.csv';
+    a.click();
+  });
+
+})();
+</script>
+</body>
+</html>
