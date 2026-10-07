@@ -21,30 +21,50 @@
   .card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:18px;margin-bottom:16px;}
   .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px;}
   .toolbar input[type=text]{flex:1;min-width:180px;padding:9px 10px;border:1px solid var(--line);border-radius:6px;font-family:inherit;}
-  .toolbar select{padding:9px 10px;border:1px solid var(--line);border-radius:6px;font-family:inherit;}
+  .toolbar select,.modal select,.modal input[type=text],.modal input[type=date],.modal input[type=number],.modal textarea{padding:8px 10px;border:1px solid var(--line);border-radius:6px;font-family:inherit;font-size:.88rem;width:100%;background:#fff;}
+  .toolbar select{width:auto;}
   button{font-family:inherit;font-size:.86rem;font-weight:600;padding:9px 14px;border-radius:6px;border:1px solid transparent;cursor:pointer;}
+  button:disabled{opacity:.5;cursor:not-allowed;}
   .btn-primary{background:var(--navy);color:#fff;}
   .btn-secondary{background:#fff;color:var(--navy);border-color:var(--navy);}
   .btn-danger{background:#fff;color:var(--error);border-color:var(--error);}
+  .btn-danger-solid{background:var(--error);color:#fff;}
   .btn-sm{padding:5px 10px;font-size:.78rem;}
   table{width:100%;border-collapse:collapse;font-size:.85rem;}
   th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap;}
   th{background:#f4f6fa;color:var(--navy);position:sticky;top:0;}
   tbody tr:hover{background:#fafbfd;}
+  tbody tr.sel{background:#eef4ff;}
   .table-scroll{overflow-x:auto;max-height:65vh;overflow-y:auto;border:1px solid var(--line);border-radius:6px;}
   .count-badge{font-size:.8rem;color:var(--muted);margin-bottom:8px;}
   .modal-overlay{position:fixed;inset:0;background:rgba(10,20,40,.55);display:none;align-items:center;justify-content:center;padding:20px;z-index:50;}
   .modal-overlay.open{display:flex;}
-  .modal{background:#fff;border-radius:8px;max-width:640px;width:100%;max-height:85vh;overflow-y:auto;padding:20px 22px;}
+  .modal{background:#fff;border-radius:8px;max-width:640px;width:100%;max-height:88vh;overflow-y:auto;padding:20px 22px;}
+  .modal.wide{max-width:820px;}
   .modal table td{white-space:normal;}
   .modal table td:first-child{color:var(--muted);width:42%;font-weight:600;}
-  .modal-close{float:right;background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--muted);}
+  .modal-close{float:right;background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--muted);padding:0 4px;}
   .photo-row{display:flex;gap:14px;margin-bottom:12px;}
   .photo-row img{border:1px solid var(--line);border-radius:4px;}
   .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--navy-dark);color:#fff;padding:10px 18px;border-radius:6px;font-size:.85rem;z-index:60;opacity:0;transition:opacity .25s;}
   .toast.show{opacity:1;}
   .unauth-box{max-width:420px;margin:60px auto;text-align:center;}
   .hidden{display:none !important;}
+
+  /* edit form */
+  .edit-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px 16px;margin-top:12px;}
+  @media (max-width:600px){.edit-grid{grid-template-columns:1fr;}}
+  .edit-grid .f{display:flex;flex-direction:column;gap:4px;}
+  .edit-grid .f.full{grid-column:1/-1;}
+  .edit-grid label{font-size:.8rem;font-weight:600;color:var(--ink);}
+  .edit-grid .e{font-size:.74rem;color:var(--error);min-height:12px;}
+  .modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:18px;flex-wrap:wrap;}
+
+  /* duplicates */
+  .dup-group{border:1px solid var(--line);border-radius:6px;margin:10px 0;overflow:hidden;}
+  .dup-head{background:#f4f6fa;color:var(--navy);font-weight:700;font-size:.8rem;padding:6px 10px;}
+  .dup-row{display:flex;gap:8px;align-items:center;padding:7px 10px;border-top:1px solid var(--line);font-size:.84rem;flex-wrap:wrap;}
+  .tag-keep{background:#e6f4e4;color:var(--green);font-size:.72rem;font-weight:700;padding:2px 6px;border-radius:4px;}
 </style>
 </head>
 <body>
@@ -88,11 +108,17 @@
         <button class="btn-secondary" id="refreshBtn">🔄 रिफ्रेश</button>
         <button class="btn-secondary" id="exportCsvBtn">⬇ CSV एक्सपोर्ट</button>
       </div>
+      <div class="toolbar">
+        <button class="btn-secondary" id="dupBtn">🔍 डुप्लिकेट खोजें</button>
+        <button class="btn-danger" id="deleteSelectedBtn" disabled>🗑 चयनित हटाएँ (0)</button>
+        <button class="btn-secondary btn-sm" id="clearSelBtn">चयन हटाएँ</button>
+      </div>
       <div class="count-badge" id="countBadge"></div>
       <div class="table-scroll">
         <table id="dataTable">
           <thead>
             <tr>
+              <th><input type="checkbox" id="selectAll" title="सभी चुनें"></th>
               <th>Application ID</th><th>कक्षा</th><th>विद्यार्थी का नाम</th>
               <th>PEN</th><th>मोबाइल</th><th>जमा तिथि</th><th>कार्य</th>
             </tr>
@@ -122,6 +148,10 @@
 
   var adminPassword = null;
   var allRecords = [];
+  var visibleRecords = [];
+  var selected = {};   // applicationId -> true
+
+  var CLASSES = ['Class I','Class II','Class III','Class IV','Class V','Class VI','Class VII','Class VIII','Class IX','Class X','Class XI','Class XII'];
 
   var fieldLabels = {
     admClass:'नामांकन कक्षा', stream:'संकाय / Stream',
@@ -134,7 +164,36 @@
     bankAccount:'बैंक खाता संख्या', ifsc:'IFSC कोड', bankName:'बैंक का नाम', accHolder:'खाताधारक का नाम', accRelation:'खाताधारक का संबंध'
   };
 
-  // ---------- Date formatting helper (dd/mm/yyyy) ----------
+  // Editable fields: [key, input type, options (for select)]
+  var editFields = [
+    ['admClass','select',CLASSES],
+    ['stream','select',['Arts','Science']],
+    ['pen','text'], ['apaar','text'], ['aadhar','text'], ['eshiksha','text'],
+    ['studentName','text'], ['dob','date'],
+    ['gender','select',['Male','Female','Other']],
+    ['category','select',['GEN','EBC','BC','SC','ST']],
+    ['religion','select',['Hindu','Muslim','Sikh','Christian','Other']],
+    ['motherName','text'], ['fatherName','text'],
+    ['aadharOwner','select',['Father','Mother']],
+    ['guardianAadhar','text'], ['mobile','text'],
+    ['address','textarea'], ['pincode','text'],
+    ['distance','select',['0-1 KM','1-3 KM','3-5 KM','5+ KM']],
+    ['cwsn','select',['No','Yes']],
+    ['income','select',['Yes','No']],
+    ['bloodGroup','select',['A+','A-','B+','B-','AB+','AB-','O+','O-']],
+    ['height','number'], ['weight','number'],
+    ['prevUdise','text'],
+    ['bankAccount','text'], ['ifsc','text'], ['bankName','text'], ['accHolder','text'],
+    ['accRelation','select',['Student','Father','Mother','Guardian']]
+  ];
+
+  // ---------- Helpers ----------
+  function esc(v){
+    return String(v === undefined || v === null ? '' : v)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+
   function formatDateDMY(value){
     if(!value) return '';
     var str = String(value).trim();
@@ -146,7 +205,7 @@
       return timeMatch ? datePart + ' ' + timeMatch[0] : datePart;
     }
     var dmy = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
-    if(dmy) return str; // already dd/mm/yyyy
+    if(dmy) return str;
     var d = new Date(str);
     if(!isNaN(d.getTime())){
       var dd = String(d.getDate()).padStart(2, '0');
@@ -160,11 +219,40 @@
     return str;
   }
 
+  // dd/mm/yyyy -> yyyy-mm-dd (for <input type="date">)
+  function toISODate(value){
+    var s = String(value || '').trim();
+    var dmy = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+    if(dmy) return dmy[3] + '-' + dmy[2].padStart(2,'0') + '-' + dmy[1].padStart(2,'0');
+    var iso = s.match(/^(\d{4}-\d{2}-\d{2})/);
+    return iso ? iso[1] : '';
+  }
+
   function toast(msg){
     var t = document.getElementById('toast');
     t.textContent = msg; t.classList.add('show');
-    setTimeout(function(){ t.classList.remove('show'); }, 2800);
+    setTimeout(function(){ t.classList.remove('show'); }, 3200);
   }
+
+  function api(payload){
+    payload.password = adminPassword;
+    return fetch(CONFIG.WEB_APP_URL, { method: 'POST', body: JSON.stringify(payload) })
+      .then(function(res){ return res.json(); });
+  }
+
+  // ---------- Modal ----------
+  var modalEl = document.getElementById('modalContent');
+  var overlayEl = document.getElementById('modalOverlay');
+  var CLOSE_BTN = '<button class="modal-close" data-close="1">×</button>';
+  function openModal(html, wide){
+    modalEl.innerHTML = html;
+    modalEl.classList.toggle('wide', !!wide);
+    overlayEl.classList.add('open');
+    var c = modalEl.querySelector('[data-close]');
+    if(c) c.addEventListener('click', closeModal);
+  }
+  function closeModal(){ overlayEl.classList.remove('open'); }
+  overlayEl.addEventListener('click', function(e){ if(e.target === this) closeModal(); });
 
   // ---------- Password login ----------
   document.getElementById('loginForm').addEventListener('submit', function(e){
@@ -177,7 +265,7 @@
 
   document.getElementById('signOutBtn').addEventListener('click', function(){
     adminPassword = null;
-    allRecords = [];
+    allRecords = []; selected = {};
     document.getElementById('passwordInput').value = '';
     document.getElementById('dashboard').classList.add('hidden');
     document.getElementById('signinScreen').classList.remove('hidden');
@@ -186,11 +274,7 @@
 
   // ---------- Load data from backend ----------
   function loadApplications(){
-    fetch(CONFIG.WEB_APP_URL, {
-      method: 'POST',
-      body: JSON.stringify({ action: 'adminList', password: adminPassword })
-    })
-      .then(function(res){ return res.json(); })
+    return api({ action: 'adminList' })
       .then(function(result){
         if(!result.success){
           document.getElementById('unauthMsg').classList.remove('hidden');
@@ -199,6 +283,11 @@
         }
         document.getElementById('unauthMsg').classList.add('hidden');
         allRecords = result.records;
+        // drop selections that no longer exist
+        var ids = {};
+        allRecords.forEach(function(r){ ids[r.applicationId] = true; });
+        Object.keys(selected).forEach(function(id){ if(!ids[id]) delete selected[id]; });
+
         document.getElementById('signinScreen').classList.add('hidden');
         document.getElementById('dashboard').classList.remove('hidden');
         document.getElementById('headerRight').classList.remove('hidden');
@@ -221,10 +310,24 @@
     });
   }
 
+  function selectedIds(){ return Object.keys(selected); }
+
+  function updateSelectionUI(){
+    var n = selectedIds().length;
+    var btn = document.getElementById('deleteSelectedBtn');
+    btn.textContent = '🗑 चयनित हटाएँ (' + n + ')';
+    btn.disabled = (n === 0);
+    var all = document.getElementById('selectAll');
+    var visSel = visibleRecords.filter(function(r){ return selected[r.applicationId]; }).length;
+    all.checked = visibleRecords.length > 0 && visSel === visibleRecords.length;
+    all.indeterminate = visSel > 0 && visSel < visibleRecords.length;
+  }
+
   function renderTable(){
     var q = document.getElementById('searchBox').value.trim();
     var cls = document.getElementById('classFilter').value;
     var filtered = allRecords.filter(function(r){ return matchesFilter(r, q, cls); });
+    visibleRecords = filtered;
 
     document.getElementById('countBadge').textContent =
       filtered.length + ' आवेदन दिखाए जा रहे हैं (कुल ' + allRecords.length + ' में से)';
@@ -233,14 +336,28 @@
     body.innerHTML = '';
     filtered.forEach(function(r){
       var tr = document.createElement('tr');
+      if(selected[r.applicationId]) tr.className = 'sel';
       tr.innerHTML =
-        '<td>'+(r.applicationId||'')+'</td>' +
-        '<td>'+(r.admClass||'')+'</td>' +
-        '<td>'+(r.studentName||'')+'</td>' +
-        '<td>'+(r.pen||'')+'</td>' +
-        '<td>'+(r.mobile||'')+'</td>' +
-        '<td>'+formatDateDMY(r.submittedAt)+'</td>' +
+        '<td></td>' +
+        '<td>'+esc(r.applicationId)+'</td>' +
+        '<td>'+esc(r.admClass)+'</td>' +
+        '<td>'+esc(r.studentName)+'</td>' +
+        '<td>'+esc(r.pen)+'</td>' +
+        '<td>'+esc(r.mobile)+'</td>' +
+        '<td>'+esc(formatDateDMY(r.submittedAt))+'</td>' +
         '<td></td>';
+
+      var cbTd = tr.children[0];
+      var cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.checked = !!selected[r.applicationId];
+      cb.addEventListener('change', function(){
+        if(cb.checked) selected[r.applicationId] = true; else delete selected[r.applicationId];
+        tr.className = cb.checked ? 'sel' : '';
+        updateSelectionUI();
+      });
+      cbTd.appendChild(cb);
+
       var actionsTd = tr.lastElementChild;
 
       var viewBtn = document.createElement('button');
@@ -248,7 +365,13 @@
       viewBtn.textContent = 'देखें';
       viewBtn.addEventListener('click', function(){ openViewModal(r); });
       actionsTd.appendChild(viewBtn);
+      actionsTd.appendChild(document.createTextNode(' '));
 
+      var editBtn = document.createElement('button');
+      editBtn.className = 'btn-secondary btn-sm';
+      editBtn.textContent = '✏️ संपादित करें';
+      editBtn.addEventListener('click', function(){ openEditModal(r); });
+      actionsTd.appendChild(editBtn);
       actionsTd.appendChild(document.createTextNode(' '));
 
       var delBtn = document.createElement('button');
@@ -259,9 +382,22 @@
 
       body.appendChild(tr);
     });
+    updateSelectionUI();
   }
   document.getElementById('searchBox').addEventListener('input', renderTable);
   document.getElementById('classFilter').addEventListener('change', renderTable);
+
+  // select-all applies to the rows currently shown (after search/filter)
+  document.getElementById('selectAll').addEventListener('change', function(){
+    var on = this.checked;
+    visibleRecords.forEach(function(r){
+      if(on) selected[r.applicationId] = true; else delete selected[r.applicationId];
+    });
+    renderTable();
+  });
+  document.getElementById('clearSelBtn').addEventListener('click', function(){
+    selected = {}; renderTable();
+  });
 
   // ---------- View modal ----------
   function openViewModal(r){
@@ -269,41 +405,255 @@
     Object.keys(fieldLabels).forEach(function(k){
       if(k === 'stream' && !r.stream) return;
       var val = (k === 'dob') ? formatDateDMY(r[k]) : r[k];
-      rows += '<tr><td>'+fieldLabels[k]+'</td><td>'+(val || '—')+'</td></tr>';
+      rows += '<tr><td>'+esc(fieldLabels[k])+'</td><td>'+esc(val || '—')+'</td></tr>';
     });
     var html =
-      '<button class="modal-close" onclick="document.getElementById(\'modalOverlay\').classList.remove(\'open\')">×</button>' +
-      '<h3 style="color:var(--navy);margin-top:0;">'+(r.applicationId||'')+'</h3>' +
+      CLOSE_BTN +
+      '<h3 style="color:var(--navy);margin-top:0;">'+esc(r.applicationId)+'</h3>' +
       '<div class="photo-row">' +
-        (r.photoUrl ? '<img src="'+r.photoUrl+'" style="width:90px;height:76px;object-fit:contain;">' : '') +
-        (r.signatureUrl ? '<img src="'+r.signatureUrl+'" style="width:130px;height:50px;object-fit:contain;">' : '') +
+        (r.photoUrl ? '<img src="'+esc(r.photoUrl)+'" style="width:90px;height:76px;object-fit:contain;">' : '') +
+        (r.signatureUrl ? '<img src="'+esc(r.signatureUrl)+'" style="width:130px;height:50px;object-fit:contain;">' : '') +
       '</div>' +
-      '<table>'+rows+'</table>';
-    document.getElementById('modalContent').innerHTML = html;
-    document.getElementById('modalOverlay').classList.add('open');
+      '<table>'+rows+'</table>' +
+      '<div class="modal-actions"><button class="btn-primary" id="viewEditBtn">✏️ संपादित करें</button></div>';
+    openModal(html);
+    document.getElementById('viewEditBtn').addEventListener('click', function(){ openEditModal(r); });
   }
-  document.getElementById('modalOverlay').addEventListener('click', function(e){
-    if(e.target === this) this.classList.remove('open');
-  });
 
-  // ---------- Delete ----------
+  // ---------- Edit modal ----------
+  function openEditModal(r){
+    var fieldsHtml = '';
+    editFields.forEach(function(f){
+      var k = f[0], type = f[1], opts = f[2];
+      var cur = (k === 'dob') ? toISODate(r[k]) : (r[k] === undefined || r[k] === null ? '' : String(r[k]));
+      var control;
+      if(type === 'select'){
+        var list = opts.slice();
+        if(cur && list.indexOf(cur) === -1) list.push(cur); // keep legacy values
+        control = '<select id="ef_'+k+'"><option value="">-- चुनें --</option>' +
+          list.map(function(o){ return '<option'+(o === cur ? ' selected' : '')+'>'+esc(o)+'</option>'; }).join('') +
+          '</select>';
+      } else if(type === 'textarea'){
+        control = '<textarea id="ef_'+k+'" rows="3">'+esc(cur)+'</textarea>';
+      } else {
+        control = '<input type="'+type+'" id="ef_'+k+'" value="'+esc(cur)+'">';
+      }
+      var full = (type === 'textarea') ? ' full' : '';
+      var hidden = (k === 'stream') ? ' id="ef_wrap_stream"' : '';
+      fieldsHtml += '<div class="f'+full+'"'+hidden+'><label for="ef_'+k+'">'+esc(fieldLabels[k])+'</label>' +
+        control + '<div class="e" id="ee_'+k+'"></div></div>';
+    });
+
+    openModal(
+      CLOSE_BTN +
+      '<h3 style="color:var(--navy);margin:0;">✏️ आवेदन संपादित करें</h3>' +
+      '<div style="font-size:.82rem;color:var(--muted);margin-top:2px;">'+esc(r.applicationId)+' — '+esc(r.studentName)+'</div>' +
+      '<div class="edit-grid">'+fieldsHtml+'</div>' +
+      '<div class="modal-actions">' +
+        '<button class="btn-secondary" id="editCancel">रद्द करें</button>' +
+        '<button class="btn-primary" id="editSave">💾 सहेजें</button>' +
+      '</div>', true);
+
+    var classSel = document.getElementById('ef_admClass');
+    function toggleStream(){
+      var senior = (classSel.value === 'Class XI' || classSel.value === 'Class XII');
+      document.getElementById('ef_wrap_stream').style.display = senior ? 'flex' : 'none';
+    }
+    classSel.addEventListener('change', toggleStream);
+    toggleStream();
+
+    document.getElementById('editCancel').addEventListener('click', closeModal);
+    document.getElementById('editSave').addEventListener('click', function(){ saveEdit(r, this); });
+  }
+
+  function collectEdits(){
+    var u = {};
+    editFields.forEach(function(f){
+      var el = document.getElementById('ef_' + f[0]);
+      u[f[0]] = el ? el.value.trim() : '';
+    });
+    var senior = (u.admClass === 'Class XI' || u.admClass === 'Class XII');
+    if(!senior) u.stream = '';
+    if(u.ifsc) u.ifsc = u.ifsc.toUpperCase();
+    return u;
+  }
+
+  function validateEdits(u){
+    var errs = {};
+    var isC1 = (u.admClass === 'Class I');
+    var senior = (u.admClass === 'Class XI' || u.admClass === 'Class XII');
+    var req = ['admClass','apaar','studentName','dob','gender','category','religion','motherName','fatherName',
+      'aadharOwner','guardianAadhar','mobile','address','pincode','distance','cwsn','income','bloodGroup',
+      'height','weight','bankAccount','ifsc','bankName','accHolder','accRelation'];
+    if(!isC1) req.push('pen','aadhar','prevUdise');
+    if(senior) req.push('stream');
+    req.forEach(function(k){ if(!u[k]) errs[k] = 'यह फ़ील्ड आवश्यक है।'; });
+    if(u.aadhar && !/^\d{12}$/.test(u.aadhar)) errs.aadhar = 'आधार संख्या 12 अंकों की होनी चाहिए।';
+    if(u.guardianAadhar && !/^\d{12}$/.test(u.guardianAadhar)) errs.guardianAadhar = 'आधार संख्या 12 अंकों की होनी चाहिए।';
+    if(u.mobile && !/^\d{10}$/.test(u.mobile)) errs.mobile = 'मोबाइल संख्या 10 अंकों की होनी चाहिए।';
+    if(u.pincode && !/^\d{6}$/.test(u.pincode)) errs.pincode = 'पिन कोड 6 अंकों का होना चाहिए।';
+    return errs;
+  }
+
+  function saveEdit(r, btn){
+    var u = collectEdits();
+    var errs = validateEdits(u);
+    editFields.forEach(function(f){
+      var e = document.getElementById('ee_' + f[0]);
+      if(e) e.textContent = errs[f[0]] || '';
+    });
+    var keys = Object.keys(errs);
+    if(keys.length){
+      toast('कृपया लाल रंग में दिखाई गई त्रुटियाँ ठीक करें।');
+      var first = document.getElementById('ee_' + keys[0]);
+      if(first) first.scrollIntoView({behavior:'smooth', block:'center'});
+      return;
+    }
+    btn.disabled = true;
+    var label = btn.textContent;
+    btn.textContent = '⏳ सहेज रहे हैं...';
+    api({ action: 'adminUpdate', applicationId: r.applicationId, updates: u })
+      .then(function(result){
+        btn.disabled = false; btn.textContent = label;
+        if(!result.success){ toast('त्रुटि: ' + (result.error || 'सहेजा नहीं जा सका।')); return; }
+        closeModal();
+        toast('आवेदन अपडेट हो गया।');
+        loadApplications();
+      })
+      .catch(function(){
+        btn.disabled = false; btn.textContent = label;
+        toast('नेटवर्क त्रुटि — सहेजा नहीं जा सका।');
+      });
+  }
+
+  // ---------- Delete (single) ----------
   function deleteRecord(r){
     if(!confirm('क्या आप वाकई "' + r.studentName + '" (' + r.applicationId + ') का आवेदन स्थायी रूप से हटाना चाहते हैं?')) return;
-    fetch(CONFIG.WEB_APP_URL, {
-      method: 'POST',
-      body: JSON.stringify({ action: 'adminDelete', password: adminPassword, row: r._row, applicationId: r.applicationId })
-    })
-      .then(function(res){ return res.json(); })
+    api({ action: 'adminDelete', row: r._row, applicationId: r.applicationId })
       .then(function(result){
         if(!result.success){
           toast('त्रुटि: ' + (result.error || 'हटाया नहीं जा सका।'));
           return;
         }
+        delete selected[r.applicationId];
         toast('आवेदन हटा दिया गया।');
         loadApplications();
       })
       .catch(function(){ toast('नेटवर्क त्रुटि — हटाया नहीं जा सका।'); });
   }
+
+  // ---------- Delete (multiple) ----------
+  function bulkDelete(ids, btn){
+    if(!ids.length){ toast('कोई आवेदन चयनित नहीं है।'); return; }
+    if(!confirm('क्या आप वाकई ' + ids.length + ' आवेदन स्थायी रूप से हटाना चाहते हैं? यह कार्य वापस नहीं हो सकता।')) return;
+    var label;
+    if(btn){ btn.disabled = true; label = btn.textContent; btn.textContent = '⏳ हटा रहे हैं...'; }
+    api({ action: 'adminDeleteMultiple', applicationIds: ids })
+      .then(function(result){
+        if(btn){ btn.disabled = false; btn.textContent = label; }
+        if(!result.success){ toast('त्रुटि: ' + (result.error || 'हटाया नहीं जा सका।')); return; }
+        ids.forEach(function(id){ delete selected[id]; });
+        closeModal();
+        toast(result.deleted + ' आवेदन हटा दिए गए' + (result.notFound ? ' (' + result.notFound + ' पहले से मौजूद नहीं थे)' : '') + '।');
+        loadApplications();
+      })
+      .catch(function(){
+        if(btn){ btn.disabled = false; btn.textContent = label; }
+        toast('नेटवर्क त्रुटि — हटाया नहीं जा सका।');
+      });
+  }
+
+  document.getElementById('deleteSelectedBtn').addEventListener('click', function(){
+    bulkDelete(selectedIds(), this);
+  });
+
+  // ---------- Duplicate finder ----------
+  var DUP_MODES = {
+    pen: 'PEN संख्या',
+    apaar: 'APAAR ID',
+    aadhar: 'विद्यार्थी का आधार संख्या',
+    combo: 'नाम + जन्म तिथि + पिता का नाम'
+  };
+
+  function norm(v){ return String(v || '').toLowerCase().replace(/\s+/g, ''); }
+
+  function dupKey(r, mode){
+    if(mode === 'combo'){
+      var n = norm(r.studentName), d = norm(formatDateDMY(r.dob)), f = norm(r.fatherName);
+      return (n && d && f) ? n + '|' + d + '|' + f : '';
+    }
+    return norm(r[mode]);
+  }
+
+  // allRecords is newest-first, so in every group index 0 = most recent submission
+  function findDupGroups(mode){
+    var map = {}, order = [];
+    allRecords.forEach(function(r){
+      var k = dupKey(r, mode);
+      if(!k) return;
+      if(!map[k]){ map[k] = []; order.push(k); }
+      map[k].push(r);
+    });
+    return order.map(function(k){ return map[k]; }).filter(function(g){ return g.length > 1; });
+  }
+
+  function openDupModal(mode){
+    mode = mode || 'pen';
+    var groups = findDupGroups(mode);
+    var total = groups.reduce(function(s, g){ return s + g.length - 1; }, 0);
+
+    var html = CLOSE_BTN + '<h3 style="color:var(--navy);margin:0 0 8px;">🔍 डुप्लिकेट आवेदन</h3>' +
+      '<label style="font-size:.82rem;font-weight:600;">डुप्लिकेट की पहचान किस आधार पर करें?</label>' +
+      '<select id="dupMode" style="margin:4px 0 10px;">' +
+      Object.keys(DUP_MODES).map(function(k){
+        return '<option value="'+k+'"'+(k === mode ? ' selected' : '')+'>'+esc(DUP_MODES[k])+'</option>';
+      }).join('') + '</select>';
+
+    if(!groups.length){
+      html += '<p style="color:var(--green);font-weight:600;">इस आधार पर कोई डुप्लिकेट नहीं मिला। ✅</p>';
+      openModal(html, true);
+    } else {
+      html += '<p style="font-size:.84rem;color:var(--muted);margin:4px 0;">' +
+        groups.length + ' समूह मिले। हर समूह में सबसे नया आवेदन रखा गया है; बाकी हटाने के लिए चयनित हैं। ' +
+        'हटाने से पहले आप चयन बदल सकते हैं।</p>';
+      groups.forEach(function(g, gi){
+        html += '<div class="dup-group"><div class="dup-head">समूह ' + (gi + 1) + ' — ' + g.length + ' प्रविष्टियाँ</div>';
+        g.forEach(function(r, i){
+          html += '<label class="dup-row"><input type="checkbox" class="dup-cb" data-id="'+esc(r.applicationId)+'"'+(i > 0 ? ' checked' : '')+'> ' +
+            '<b>'+esc(r.applicationId)+'</b> · '+esc(r.admClass)+' · '+esc(r.studentName)+' · PEN: '+esc(r.pen || '—')+
+            ' · '+esc(formatDateDMY(r.submittedAt)) +
+            (i === 0 ? ' <span class="tag-keep">सबसे नया — रखें</span>' : '') + '</label>';
+        });
+        html += '</div>';
+      });
+      html += '<div class="modal-actions">' +
+        '<button class="btn-secondary" id="dupCancel">बंद करें</button>' +
+        '<button class="btn-danger-solid" id="dupDelete">🗑 चयनित डुप्लिकेट हटाएँ</button></div>';
+      openModal(html, true);
+
+      var delBtn = document.getElementById('dupDelete');
+      function refreshCount(){
+        var n = modalEl.querySelectorAll('.dup-cb:checked').length;
+        delBtn.textContent = '🗑 चयनित डुप्लिकेट हटाएँ (' + n + ')';
+        delBtn.disabled = (n === 0);
+      }
+      modalEl.querySelectorAll('.dup-cb').forEach(function(cb){ cb.addEventListener('change', refreshCount); });
+      refreshCount();
+      document.getElementById('dupCancel').addEventListener('click', closeModal);
+      delBtn.addEventListener('click', function(){
+        var ids = [].map.call(modalEl.querySelectorAll('.dup-cb:checked'), function(cb){ return cb.getAttribute('data-id'); });
+        // safety: never delete every entry of a group
+        var risky = groups.some(function(g){
+          return g.every(function(r){ return ids.indexOf(r.applicationId) !== -1; });
+        });
+        if(risky && !confirm('चेतावनी: किसी समूह की सभी प्रविष्टियाँ चयनित हैं — उस विद्यार्थी का कोई भी आवेदन नहीं बचेगा। क्या आप फिर भी आगे बढ़ना चाहते हैं?')) return;
+        bulkDelete(ids, delBtn);
+      });
+    }
+    document.getElementById('dupMode').addEventListener('change', function(){ openDupModal(this.value); });
+  }
+
+  document.getElementById('dupBtn').addEventListener('click', function(){ openDupModal('pen'); });
 
   // ---------- CSV export (current filtered view) ----------
   document.getElementById('exportCsvBtn').addEventListener('click', function(){
