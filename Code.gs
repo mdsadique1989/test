@@ -1,254 +1,401 @@
-// Code.gs - FORM S02/UDISE  (one sheet row per student)
-//
-// Data goes to a tab called "Students" (created automatically).
-// Your old wide sheet is NOT touched - keep it as a backup.
+/**
+ * UHS Kaparpura — Online Admission backend
+ * Deploy this as a Google Apps Script Web App.
+ * It writes every submission to a Google Sheet, and stores the
+ * uploaded photo + signature in a Google Drive folder.
+ *
+ * SETUP (one-time):
+ * 1. Create a blank Google Sheet. Copy its ID from the URL:
+ *      https://docs.google.com/spreadsheets/d/  <-- SHEET_ID -->  /edit
+ * 2. Create a Google Drive folder (e.g. "UHSK Admission Uploads").
+ *    Copy its ID from the URL:
+ *      https://drive.google.com/drive/folders/  <-- FOLDER_ID -->
+ * 3. Paste both IDs below.
+ * 4. In the Apps Script editor: Extensions > Apps Script (from the Sheet),
+ *    delete any starter code, paste this whole file in.
+ * 5. Click Deploy > New deployment > type: Web app.
+ *      - Execute as: Me
+ *      - Who has access: Anyone
+ * 6. Copy the deployment URL (ends in /exec) into CONFIG.WEB_APP_URL
+ *    inside index.html.
+ * 7. Re-deploy (Manage deployments > Edit > New version) any time you
+ *    change this script.
+ */
 
-var SHEET_NAME = 'Students';
+// ====================== CONFIGURATION ======================
+var SHEET_ID = '1g462lSD6PBngZicD7sTVPYlmibrKO4xDq-ndG3QBngQ';
+var SHEET_NAME = 'data';
+var DRIVE_FOLDER_ID = '1izJr-oWqhexXsZ6b8sBdOp700_ouZ8vw';
+
+// Optional lightweight shared secret so random visitors can't scrape
+// applicant data (Aadhar / bank details) just by guessing the web app URL.
+// Set the same value in CONFIG.API_KEY inside index.html.
+// Leave both blank ('') to disable this check.
+var API_KEY = '';
+
+// ---- Admin dashboard login ----
+// The admin password is NOT written in this file (so it's safe even if you
+// commit Code.gs to a public GitHub repo). Instead it's stored privately
+// inside this Apps Script project:
+//   Apps Script editor -> ⚙️ Project Settings -> Script Properties
+//   -> Add script property -> name: ADMIN_PASSWORD, value: (choose a password)
+// The person opening admin.html simply types that password each time they
+// want to log in — nothing about it is ever saved in any file.
+var ADMIN_PASSWORD_PROPERTY = 'ADMIN_PASSWORD';
+
 var TIMEZONE = 'Asia/Kolkata';
 
+// Column order in the sheet (row 1 = headers, auto-created on first run).
 var HEADERS = [
-  'Timestamp', 'Submission ID', 'Academic Year', 'UDISE State', 'District', 'Block',
-  'UDISE Code', 'School Name', 'School Contact Number',
-  'S.No', 'Name', 'Gender', 'DOB', 'CWSN', 'Class', 'Section', 'Admission Date',
-  'Mother Name', 'Father Name', 'Guardian Name', 'Mobile', 'Alt Mobile',
-  'Aadhaar', 'Aadhaar Name', 'Reason'
+  'applicationId', 'submittedAt', 'admClass', 'stream',
+  'pen', 'apaar', 'aadhar', 'eshiksha',
+  'studentName', 'dob', 'gender', 'category', 'religion',
+  'motherName', 'fatherName', 'aadharOwner', 'guardianAadhar', 'mobile',
+  'address', 'pincode',
+  'distance', 'cwsn', 'income', 'bloodGroup', 'height', 'weight',
+  'prevUdise',
+  'bankAccount', 'ifsc', 'bankName', 'accHolder', 'accRelation',
+  'photoUrl', 'signatureUrl'
 ];
-var COL = {};
-HEADERS.forEach(function (h, i) { COL[h] = i; });
+// =============================================================
 
-// ---------- web app entry points ----------
-
-function doPost(e) {
-  var lock = LockService.getScriptLock();
-  // Only one save at a time, so two people can never slip in the same Aadhaar together.
-  if (!lock.tryLock(30000)) {
-    return respond_({ status: 'error', message: 'Server is busy. Please try again in a moment.' });
+// Converts a dob value into 'dd/mm/yyyy' text.
+// Accepts: a native <input type="date"> value ('yyyy-mm-dd'), an already
+// dd/mm/yyyy string (left as-is), or a real Date object (e.g. if a sheet
+// cell auto-converted an older entry) — always normalizes to dd/mm/yyyy so
+// storage and every API response stay consistent.
+function formatDateDMY_(value) {
+  if (value === '' || value === null || value === undefined) return '';
+  if (Object.prototype.toString.call(value) === '[object Date]') {
+    return Utilities.formatDate(value, TIMEZONE, 'dd/MM/yyyy');
   }
-  try {
-    var data = JSON.parse(e.postData.contents);
-    return respond_(saveSubmission_(data));
-  } catch (err) {
-    return respond_({ status: 'error', message: String(err) });
-  } finally {
-    lock.releaseLock();
-  }
-}
-
-function doGet() {
-  return respond_({ status: 'ok' });
-}
-
-function respond_(obj) {
-  return ContentService.createTextOutput(JSON.stringify(obj))
-    .setMimeType(ContentService.MimeType.JSON);
-}
-
-// ---------- helpers ----------
-
-function clean_(v) { return String(v == null ? '' : v).replace(/\s+/g, ' ').trim(); }
-function upper_(v) { return clean_(v).toUpperCase(); }
-function digits_(v) { return String(v == null ? '' : v).replace(/\D/g, ''); }
-
-// 2026-2027 / 2026/27 / 2026 - 27  ->  2026-27
-function normYear_(v) {
-  var s = clean_(v);
-  var m = s.match(/^(\d{4})\s*[-\/\u2013]\s*(\d{2}|\d{4})$/);
-  return m ? m[1] + '-' + m[2].slice(-2) : s;
+  var str = String(value).trim();
+  var iso = str.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (iso) return iso[3] + '/' + iso[2] + '/' + iso[1];
+  var dmy = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (dmy) return str; // already dd/mm/yyyy
+  return str;
 }
 
 function getSheet_() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ss = SpreadsheetApp.openById(SHEET_ID);
   var sheet = ss.getSheetByName(SHEET_NAME);
   if (!sheet) sheet = ss.insertSheet(SHEET_NAME);
   if (sheet.getLastRow() === 0) {
-    sheet.getRange(1, 1, 1, HEADERS.length).setValues([HEADERS]).setFontWeight('bold');
+    sheet.appendRow(HEADERS);
     sheet.setFrozenRows(1);
   }
   return sheet;
 }
 
-// Builds one sheet row (array in HEADERS order). Values are cleaned here.
-function buildRow_(ts, subId, school, s, index) {
-  return [
-    ts, subId,
-    normYear_(school.academicYear), upper_(school.udiseState), upper_(school.district), upper_(school.block),
-    upper_(school.udiseCode), upper_(school.schoolName), digits_(school.schoolContact),
-    String(s.sno || index + 1),
-    upper_(s.name), clean_(s.gender), clean_(s.dob), clean_(s.cwsn), upper_(s.class), upper_(s.section),
-    clean_(s.admissionDate),
-    upper_(s.motherName), upper_(s.fatherName), upper_(s.guardianName),
-    digits_(s.mobile), digits_(s.altMobile),
-    digits_(s.aadhaar), upper_(s.aadhaarName), clean_(s.reason)
-  ];
+function getFolder_() {
+  return DriveApp.getFolderById(DRIVE_FOLDER_ID);
 }
 
-// Writes rows as plain text so Aadhaar / mobile / dates are never converted to numbers or dates.
-function writeRows_(sheet, rows) {
-  if (!rows.length) return;
-  var range = sheet.getRange(sheet.getLastRow() + 1, 1, rows.length, HEADERS.length);
-  range.setNumberFormat('@');
-  range.setValues(rows);
+function genAppId_() {
+  var stamp = Utilities.formatDate(new Date(), TIMEZONE, 'yyMMdd');
+  var rand = Math.floor(1000 + Math.random() * 9000);
+  return 'UHSK' + stamp + rand;
 }
 
-// ---------- main save logic ----------
-
-function saveSubmission_(data) {
-  var school = {
-    academicYear: data.academicYear,
-    udiseState: data.udiseState || data.UdiseState,   // accept old key spelling too
-    district: data.district,
-    block: data.block,
-    udiseCode: data.udiseCode || data.UdiseCode,
-    schoolName: data.schoolName,
-    schoolContact: data.schoolContact
-  };
-
-  if (!clean_(school.block) || !clean_(school.udiseCode) || !clean_(school.schoolName)) {
-    return { status: 'error', message: 'Block, UDISE Code and School Name are required.' };
-  }
-
-  // Skip empty student slots.
-  var students = (data.students || []).filter(function (s) {
-    return s && (clean_(s.name) || digits_(s.aadhaar) || digits_(s.mobile));
-  });
-  if (!students.length) return { status: 'error', message: 'No student details received.' };
-
-  // Validate (the form checks too, but never trust the browser alone).
-  var seen = {};
-  for (var i = 0; i < students.length; i++) {
-    var s = students[i];
-    var label = 'Student ' + (s.sno || i + 1);
-    var a = digits_(s.aadhaar), m = digits_(s.mobile), alt = digits_(s.altMobile);
-    if (!clean_(s.name)) return { status: 'error', message: label + ': Name is required.' };
-    if (!/^\d{12}$/.test(a)) return { status: 'error', message: label + ': Aadhaar must be exactly 12 digits.' };
-    if (!/^\d{10}$/.test(m)) return { status: 'error', message: label + ': Mobile number is mandatory (10 digits).' };
-    if (alt && !/^\d{10}$/.test(alt)) return { status: 'error', message: label + ': Alternate number must be 10 digits.' };
-    if (seen[a]) return { status: 'error', message: 'Same Aadhaar entered twice in this form (' + a + ').' };
-    seen[a] = true;
-  }
-
-  var sheet = getSheet_();
-  var n = sheet.getLastRow() - 1;                       // data rows (excluding header)
-  var subId = clean_(data.submissionId) || Utilities.getUuid();
-
-  // Read only the two columns we need.
-  var idVals = n > 0 ? sheet.getRange(2, COL['Submission ID'] + 1, n, 1).getValues() : [];
-  var aVals = n > 0 ? sheet.getRange(2, COL['Aadhaar'] + 1, n, 1).getValues() : [];
-
-  var rowsByAadhaar = {};   // aadhaar -> [{row, id}]
-  var ownRows = [];         // rows already saved under this submission ID
-  var ownAadhaar = {};
-  for (var r = 0; r < n; r++) {
-    var ea = digits_(aVals[r][0]);
-    var eid = String(idVals[r][0]);
-    if (ea) (rowsByAadhaar[ea] = rowsByAadhaar[ea] || []).push({ row: r + 2, id: eid });
-    if (eid === subId) { ownRows.push(r + 2); ownAadhaar[ea] = true; }
-  }
-
-  // Same submission ID saved before?
-  //  - shares an Aadhaar with it  -> user is correcting a saved form: replace the old rows.
-  //  - shares none                -> user typed a NEW set of students without clearing: keep old rows.
-  var correction = false;
-  if (ownRows.length) {
-    correction = students.some(function (st) { return ownAadhaar[digits_(st.aadhaar)]; });
-    if (!correction) subId = Utilities.getUuid();
-  }
-
-  // Duplicate check against everything already in the sheet.
-  var dups = [];
-  students.forEach(function (st, idx) {
-    var a = digits_(st.aadhaar);
-    var clash = (rowsByAadhaar[a] || []).some(function (x) { return x.id !== subId; });
-    if (clash) dups.push({ sno: st.sno || idx + 1, aadhaar: a });
-  });
-  if (dups.length) {
-    return {
-      status: 'duplicate',
-      duplicates: dups,
-      message: 'Already registered. This AADHAAR number exists in the records:\n' +
-        dups.map(function (d) { return '  Student ' + d.sno + ' - ' + d.aadhaar; }).join('\n') +
-        '\n\nNothing was saved. Please remove or correct it and try again.'
-    };
-  }
-
-  // Replace old rows on correction (delete bottom-up so row numbers stay valid).
-  if (correction) {
-    ownRows.sort(function (x, y) { return y - x; }).forEach(function (row) { sheet.deleteRow(row); });
-  }
-
-  var ts = Utilities.formatDate(new Date(), TIMEZONE, 'dd/MM/yyyy HH:mm:ss');
-  var rows = students.map(function (st, idx) { return buildRow_(ts, subId, school, st, idx); });
-  writeRows_(sheet, rows);
-
-  return { status: 'success', submissionId: subId, saved: rows.length };
+// Decodes a base64 data-URL image and saves it into the Drive folder.
+// Returns a viewable link, or '' if there was no image.
+function saveImage_(dataUrl, filenamePrefix) {
+  if (!dataUrl) return '';
+  var match = String(dataUrl).match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/);
+  if (!match) return '';
+  var mime = match[1];
+  var base64 = match[2];
+  var ext = mime.split('/')[1] === 'jpeg' ? 'jpg' : mime.split('/')[1];
+  var bytes = Utilities.base64Decode(base64);
+  var blob = Utilities.newBlob(bytes, mime, filenamePrefix + '.' + ext);
+  var file = getFolder_().createFile(blob);
+  // Anyone with the (unguessable) link can view — needed so the printed
+  // application PDF can display the photo/signature as an <img>.
+  file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+  return 'https://drive.google.com/thumbnail?id=' + file.getId() + '&sz=w1000';
 }
 
-// ---------- ONE-TIME: convert your old wide sheet into the vertical "Students" sheet ----------
-// Run once from the Apps Script editor (select migrateOldSheet > Run).
-// Safe to run twice: rows already migrated are skipped. The old sheet is left untouched.
+function checkKey_(providedKey) {
+  if (!API_KEY) return true; // check disabled
+  return providedKey === API_KEY;
+}
 
-function migrateOldSheet() {
-  var OLD_SHEET_NAME = 'Sheet1';   // <-- change to your old tab's name if different
+// Checks the admin password against the one stored in Script Properties.
+// Returns true/false. If no ADMIN_PASSWORD property has been set yet,
+// this always fails closed (denies access) rather than opening the
+// dashboard to everyone by accident.
+function checkAdminPassword_(providedPassword) {
+  var real = PropertiesService.getScriptProperties().getProperty(ADMIN_PASSWORD_PROPERTY);
+  if (!real) return false;
+  return String(providedPassword || '') === real;
+}
 
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var old = ss.getSheetByName(OLD_SHEET_NAME);
-  if (!old) throw new Error('Old sheet "' + OLD_SHEET_NAME + '" not found. Edit OLD_SHEET_NAME.');
-  if (OLD_SHEET_NAME === SHEET_NAME) throw new Error('OLD_SHEET_NAME must differ from ' + SHEET_NAME);
+function jsonOut_(obj) {
+  return ContentService.createTextOutput(JSON.stringify(obj))
+    .setMimeType(ContentService.MimeType.JSON);
+}
 
-  var lock = LockService.getScriptLock();
-  lock.waitLock(30000);
+
+
+// ---------------------- POST: router ----------------------
+function doPost(e) {
   try {
-    var vals = old.getDataRange().getValues();
-    var head = vals[0];
-    var c = function (name) {
-      var i = head.indexOf(name);
-      if (i < 0) throw new Error('Column not found in old sheet: ' + name);
-      return i;
-    };
+    var body = JSON.parse(e.postData.contents);
 
-    var target = getSheet_();
-    var n = target.getLastRow() - 1;
-    var done = {};
-    if (n > 0) {
-      target.getRange(2, COL['Submission ID'] + 1, n, 1).getValues()
-        .forEach(function (x) { done[String(x[0])] = true; });
-    }
+    if (body.action === 'submit') return handleSubmit_(body);
+    if (body.action === 'adminList') return handleAdminList_(body);
+    if (body.action === 'adminDelete') return handleAdminDelete_(body);
+    if (body.action === 'adminDeleteMultiple') return handleAdminDeleteMultiple_(body);
+    if (body.action === 'adminUpdate') return handleAdminUpdate_(body);
 
-    var out = [], seenAadhaar = {}, dupLog = [];
-    for (var r = 1; r < vals.length; r++) {
-      var v = vals[r];
-      var subId = 'OLD-' + (r + 1);              // r+1 = row number in old sheet
-      if (done[subId]) continue;
+    return jsonOut_({ success: false, error: 'Unknown action' });
+  } catch (err) {
+    return jsonOut_({ success: false, error: err.message });
+  }
+}
 
-      var tsRaw = v[c('Timestamp')];
-      var ts = tsRaw instanceof Date ? Utilities.formatDate(tsRaw, TIMEZONE, 'dd/MM/yyyy HH:mm:ss') : String(tsRaw);
-      var school = {
-        academicYear: v[c('Academic Year')], udiseState: v[c('UDISE State')], district: v[c('District')],
-        block: v[c('Block')], udiseCode: v[c('UDISE Code')], schoolName: v[c('School Name')],
-        schoolContact: v[c('School Contact Number')]
-      };
+// ---- Public: submit a new application (guarded by the light API key) ----
+function handleSubmit_(body) {
+  if (!checkKey_(body.apiKey)) {
+    return jsonOut_({ success: false, error: 'Unauthorized' });
+  }
 
-      for (var k = 1; k <= 3; k++) {
-        var p = 'S' + k + ' ';
-        var s = {
-          sno: k, name: v[c(p + 'Name')], gender: v[c(p + 'Gender')], dob: v[c(p + 'DOB')], cwsn: v[c(p + 'CWSN')],
-          class: v[c(p + 'Class')], section: v[c(p + 'Section')], admissionDate: v[c(p + 'Admission Date')],
-          motherName: v[c(p + 'Mother Name')], fatherName: v[c(p + 'Father Name')], guardianName: v[c(p + 'Guardian Name')],
-          mobile: v[c(p + 'Mobile')], altMobile: v[c(p + 'Alt Mobile')], aadhaar: v[c(p + 'Aadhaar')],
-          aadhaarName: v[c(p + 'Aadhaar Name')], reason: v[c(p + 'Reason')]
-        };
-        if (!(clean_(s.name) || digits_(s.aadhaar) || digits_(s.mobile))) continue;   // empty slot
-        var a = digits_(s.aadhaar);
-        if (a && seenAadhaar[a]) dupLog.push('Aadhaar ' + a + ' appears again in old row ' + (r + 1) + ' (S' + k + ')');
-        seenAadhaar[a] = true;
-        out.push(buildRow_(ts, subId, school, s, k - 1));
-      }
-    }
+  var appId = genAppId_();
+  var photoUrl = saveImage_(body.photo, appId + '_photo');
+  var signatureUrl = saveImage_(body.signature, appId + '_signature');
 
-    writeRows_(target, out);
-    Logger.log('Migrated ' + out.length + ' student rows. Duplicate Aadhaar in old data: ' + dupLog.length);
-    dupLog.forEach(function (d) { Logger.log(d); });
+  var dobFormatted = formatDateDMY_(body.dob);
+
+  var row = HEADERS.map(function (key) {
+    if (key === 'applicationId') return appId;
+    if (key === 'submittedAt') return Utilities.formatDate(new Date(), TIMEZONE, 'dd-MM-yyyy HH:mm');
+    if (key === 'dob') return dobFormatted;
+    if (key === 'photoUrl') return photoUrl;
+    if (key === 'signatureUrl') return signatureUrl;
+    return body[key] !== undefined ? body[key] : '';
+  });
+
+  // LockService avoids two simultaneous submissions clashing on the same row.
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    var sheet = getSheet_();
+    sheet.appendRow(row);
+    // Force the DOB cell to stay as literal text ('@' format) so Google
+    // Sheets doesn't silently auto-convert the dd/mm/yyyy string into its
+    // own Date/serial value (which would show/export in a different format).
+    var dobColIdx = HEADERS.indexOf('dob') + 1;
+    var lastRow = sheet.getLastRow();
+    sheet.getRange(lastRow, dobColIdx).setNumberFormat('@').setValue(dobFormatted);
   } finally {
     lock.releaseLock();
+  }
+
+  return jsonOut_({ success: true, applicationId: appId, photoUrl: photoUrl, signatureUrl: signatureUrl });
+}
+
+// ---- Admin: list every application (guarded by the admin password) ----
+function handleAdminList_(body) {
+  if (!checkAdminPassword_(body.password)) {
+    return jsonOut_({ success: false, error: 'Unauthorized' });
+  }
+
+  var data = getSheet_().getDataRange().getValues();
+  var headers = data[0];
+  var records = [];
+  for (var i = 1; i < data.length; i++) {
+    var record = {};
+    headers.forEach(function (h, idx) {
+      record[h] = (h === 'dob') ? formatDateDMY_(data[i][idx]) : data[i][idx];
+    });
+    record._row = i + 1; // 1-based sheet row number, needed for delete
+    records.push(record);
+  }
+  records.reverse(); // newest first
+
+  return jsonOut_({ success: true, records: records });
+}
+
+// ---- Admin: delete one application by its sheet row number ----
+function handleAdminDelete_(body) {
+  if (!checkAdminPassword_(body.password)) {
+    return jsonOut_({ success: false, error: 'Unauthorized' });
+  }
+  var rowNum = parseInt(body.row, 10);
+  if (!rowNum || rowNum < 2) {
+    return jsonOut_({ success: false, error: 'Invalid row' });
+  }
+
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    var sheet = getSheet_();
+    // Confirm the applicationId still matches before deleting, in case rows
+    // shifted between the admin loading the list and clicking delete.
+    var appIdCol = HEADERS.indexOf('applicationId') + 1;
+    var currentAppId = sheet.getRange(rowNum, appIdCol).getValue();
+    if (body.applicationId && String(currentAppId) !== String(body.applicationId)) {
+      return jsonOut_({ success: false, error: 'Row changed, please refresh and try again.' });
+    }
+    sheet.deleteRow(rowNum);
+  } finally {
+    lock.releaseLock();
+  }
+
+  return jsonOut_({ success: true });
+}
+
+// Finds the sheet row number (1-based) for an applicationId. Returns 0 if not found.
+function findRowByAppId_(sheet, appId) {
+  var last = sheet.getLastRow();
+  if (last < 2) return 0;
+  var col = HEADERS.indexOf('applicationId') + 1;
+  var vals = sheet.getRange(2, col, last - 1, 1).getValues();
+  for (var i = 0; i < vals.length; i++) {
+    if (String(vals[i][0]) === appId) return i + 2;
+  }
+  return 0;
+}
+
+// ---- Admin: delete MANY applications at once (by applicationId) ----
+// Looks rows up by applicationId (not by row number) and deletes from the
+// bottom up, so row shifts can never delete the wrong application.
+function handleAdminDeleteMultiple_(body) {
+  if (!checkAdminPassword_(body.password)) {
+    return jsonOut_({ success: false, error: 'Unauthorized' });
+  }
+  var ids = body.applicationIds;
+  if (!ids || Object.prototype.toString.call(ids) !== '[object Array]' || ids.length === 0) {
+    return jsonOut_({ success: false, error: 'No applications selected' });
+  }
+  var wanted = {};
+  ids.forEach(function (id) { wanted[String(id)] = true; });
+
+  var lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  var deleted = 0;
+  try {
+    var sheet = getSheet_();
+    var last = sheet.getLastRow();
+    if (last >= 2) {
+      var col = HEADERS.indexOf('applicationId') + 1;
+      var vals = sheet.getRange(2, col, last - 1, 1).getValues();
+      var rowsToDelete = [];
+      for (var i = 0; i < vals.length; i++) {
+        if (wanted[String(vals[i][0])]) rowsToDelete.push(i + 2);
+      }
+      rowsToDelete.sort(function (a, b) { return b - a; }); // bottom first
+      rowsToDelete.forEach(function (r) { sheet.deleteRow(r); });
+      deleted = rowsToDelete.length;
+    }
+  } finally {
+    lock.releaseLock();
+  }
+  return jsonOut_({ success: true, deleted: deleted, notFound: ids.length - deleted });
+}
+
+// ---- Admin: edit the details of one application ----
+// Only these columns may be changed; id, timestamp and image links are fixed.
+var NON_EDITABLE_FIELDS = ['applicationId', 'submittedAt', 'photoUrl', 'signatureUrl'];
+
+// Moves the Drive file referenced by a thumbnail URL (…?id=FILE_ID&…) to trash.
+// Failures are ignored so a missing/already-deleted file never blocks an edit.
+function trashDriveFileByUrl_(url) {
+  try {
+    var m = String(url || '').match(/[?&]id=([a-zA-Z0-9_-]+)/);
+    if (m) DriveApp.getFileById(m[1]).setTrashed(true);
+  } catch (err) { /* ignore */ }
+}
+
+function handleAdminUpdate_(body) {
+  if (!checkAdminPassword_(body.password)) {
+    return jsonOut_({ success: false, error: 'Unauthorized' });
+  }
+  var appId = String(body.applicationId || '').trim();
+  var updates = body.updates;
+  if (!appId || !updates || typeof updates !== 'object') {
+    return jsonOut_({ success: false, error: 'Invalid request' });
+  }
+
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    var sheet = getSheet_();
+    var rowNum = findRowByAppId_(sheet, appId);
+    if (!rowNum) {
+      return jsonOut_({ success: false, error: 'Application not found. Please refresh and try again.' });
+    }
+    var changed = 0;
+    HEADERS.forEach(function (key, idx) {
+      if (NON_EDITABLE_FIELDS.indexOf(key) !== -1) return;
+      if (!Object.prototype.hasOwnProperty.call(updates, key)) return;
+      var val = updates[key];
+      val = (key === 'dob') ? formatDateDMY_(val)
+                            : String(val === null || val === undefined ? '' : val).trim();
+      // '@' = plain text, so Sheets never strips leading zeros (PEN, bank a/c, etc.)
+      sheet.getRange(rowNum, idx + 1).setNumberFormat('@').setValue(val);
+      changed++;
+    });
+    // Optional: replace photo and/or signature. This action already requires the
+    // admin password (checked above), so only the admin can change images.
+    var imgResult = {};
+    [['photo', 'photoUrl', '_photo'], ['signature', 'signatureUrl', '_signature']].forEach(function (p) {
+      var dataUrl = body[p[0]];
+      if (!dataUrl) return;
+      var colIdx = HEADERS.indexOf(p[1]) + 1;
+      var oldUrl = String(sheet.getRange(rowNum, colIdx).getValue() || '');
+      var newUrl = saveImage_(dataUrl, appId + p[2]);
+      if (!newUrl) return; // not a valid image data URL — leave the old one
+      sheet.getRange(rowNum, colIdx).setValue(newUrl);
+      trashDriveFileByUrl_(oldUrl); // old image is no longer needed (and was link-shared)
+      imgResult[p[1]] = newUrl;
+      changed++;
+    });
+    return jsonOut_({ success: true, changed: changed, images: imgResult });
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// ---------------------- GET: public self-lookup / health check ----------------------
+function doGet(e) {
+  try {
+    var action = e.parameter.action;
+
+    if (action === 'search') {
+      if (!checkKey_(e.parameter.apiKey)) {
+        return jsonOut_({ found: false, error: 'Unauthorized' });
+      }
+      var cls = e.parameter.class || '';
+      var type = e.parameter.type || 'appId';
+      var value = String(e.parameter.value || '').trim();
+
+      var data = getSheet_().getDataRange().getValues();
+      var headers = data[0];
+      var classIdx = headers.indexOf('admClass');
+      var appIdIdx = headers.indexOf('applicationId');
+      var penIdx = headers.indexOf('pen');
+
+      for (var i = data.length - 1; i >= 1; i--) { // newest first
+        var row = data[i];
+        var classMatch = String(row[classIdx]) === cls;
+        var keyMatch = type === 'appId'
+          ? String(row[appIdIdx]) === value
+          : String(row[penIdx]) === value;
+        if (classMatch && keyMatch) {
+          var record = {};
+          headers.forEach(function (h, idx) {
+            record[h] = (h === 'dob') ? formatDateDMY_(row[idx]) : row[idx];
+          });
+          return jsonOut_({ found: true, record: record });
+        }
+      }
+      return jsonOut_({ found: false });
+    }
+
+    return jsonOut_({ ok: true, message: 'UHS Kaparpura admission API is running.' });
+  } catch (err) {
+    return jsonOut_({ error: err.message });
   }
 }

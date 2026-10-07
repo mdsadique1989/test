@@ -150,6 +150,12 @@
   var allRecords = [];
   var visibleRecords = [];
   var selected = {};   // applicationId -> true
+  var newPhoto = null, newSig = null;   // pending replacement images (data URLs) in the edit modal
+
+  // Same targets/limits as the student form (400 DPI): photo 3.5x3.0cm 50-100KB, signature 3.5x1.1cm 5-20KB
+  var DPI_FACTOR = 400 / 2.54;
+  var PHOTO_TARGET = { w: Math.round(3.5 * DPI_FACTOR), h: Math.round(3.0 * DPI_FACTOR) };
+  var SIG_TARGET   = { w: Math.round(3.5 * DPI_FACTOR), h: Math.round(1.1 * DPI_FACTOR) };
 
   var CLASSES = ['Class I','Class II','Class III','Class IV','Class V','Class VI','Class VII','Class VIII','Class IX','Class X','Class XI','Class XII'];
 
@@ -420,8 +426,61 @@
     document.getElementById('viewEditBtn').addEventListener('click', function(){ openEditModal(r); });
   }
 
+  // ---------- Image resize/compress (same algorithm as the student form) ----------
+  function processImage(file, minKB, maxKB, tw, th, previewEl, infoEl, errEl, storeCb){
+    if(!file) return;
+    previewEl.innerHTML = '<span style="font-size:.72rem;color:#666;">Processing...</span>';
+    infoEl.textContent = ''; errEl.textContent = '';
+    var reader = new FileReader();
+    reader.onload = function(ev){
+      var img = new Image();
+      img.onload = function(){
+        var canvas = document.createElement('canvas');
+        canvas.width = tw; canvas.height = th;
+        canvas.getContext('2d').drawImage(img, 0, 0, tw, th);
+        var quality = 0.90, dataUrl = '', kb = 0, attempts = 0;
+        do {
+          dataUrl = canvas.toDataURL('image/jpeg', quality);
+          kb = (dataUrl.split(',')[1].length * 3 / 4) / 1024;
+          if(kb > maxKB) quality -= 0.05; else if(kb < minKB) quality += 0.03;
+          attempts++;
+        } while((kb < minKB || kb > maxKB) && quality > 0.05 && quality < 1.0 && attempts < 100);
+
+        previewEl.innerHTML = '<img src="'+dataUrl+'" style="width:100%;height:100%;object-fit:contain;">';
+        var ok = kb >= minKB && kb <= maxKB;
+        infoEl.textContent = 'नया आकार: ' + kb.toFixed(2) + ' KB (' + tw + '×' + th + ' px)' + (ok ? ' ✅' : '');
+        infoEl.style.color = ok ? '#138808' : '#b3261e';
+        if(!ok) errEl.textContent = 'पूरी तरह सीमा में संपीड़ित नहीं हो सका (' + minKB + '–' + maxKB + ' KB)। दूसरी फाइल आज़माएँ।';
+        storeCb(dataUrl);
+      };
+      img.onerror = function(){
+        errEl.textContent = 'यह फाइल मान्य चित्र नहीं है।';
+        previewEl.textContent = '';
+        storeCb(null);
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function imageEditBlock(kind, label, curUrl, sig){
+    var boxStyle = 'border:1.5px dashed var(--line);border-radius:6px;background:#fafafa;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:.7rem;color:var(--muted);text-align:center;' +
+      (sig ? 'width:150px;height:60px;' : 'width:110px;height:96px;');
+    return '<div class="f"><label>' + label + '</label>' +
+      '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-start;">' +
+        '<div><div style="font-size:.7rem;color:var(--muted);">वर्तमान</div>' +
+          '<div style="' + boxStyle + '">' + (curUrl ? '<img src="'+esc(curUrl)+'" style="width:100%;height:100%;object-fit:contain;">' : 'उपलब्ध नहीं') + '</div></div>' +
+        '<div><div style="font-size:.7rem;color:var(--muted);">नया</div>' +
+          '<div id="ef_' + kind + 'New" style="' + boxStyle + '">—</div></div>' +
+      '</div>' +
+      '<input type="file" id="ef_' + kind + 'File" accept="image/*" style="margin-top:6px;">' +
+      '<div class="e" id="ei_' + kind + '" style="min-height:12px;font-size:.74rem;"></div>' +
+      '<div class="e" id="ee_' + kind + '"></div></div>';
+  }
+
   // ---------- Edit modal ----------
   function openEditModal(r){
+    newPhoto = null; newSig = null;
     var fieldsHtml = '';
     editFields.forEach(function(f){
       var k = f[0], type = f[1], opts = f[2];
@@ -444,6 +503,9 @@
         control + '<div class="e" id="ee_'+k+'"></div></div>';
     });
 
+    fieldsHtml += imageEditBlock('photo', 'छात्र का फोटो (केवल एडमिन बदल सकता है)', r.photoUrl, false);
+    fieldsHtml += imageEditBlock('sig', 'छात्र का हस्ताक्षर (केवल एडमिन बदल सकता है)', r.signatureUrl, true);
+
     openModal(
       CLOSE_BTN +
       '<h3 style="color:var(--navy);margin:0;">✏️ आवेदन संपादित करें</h3>' +
@@ -461,6 +523,17 @@
     }
     classSel.addEventListener('change', toggleStream);
     toggleStream();
+
+    document.getElementById('ef_photoFile').addEventListener('change', function(){
+      processImage(this.files[0], 50, 100, PHOTO_TARGET.w, PHOTO_TARGET.h,
+        document.getElementById('ef_photoNew'), document.getElementById('ei_photo'),
+        document.getElementById('ee_photo'), function(url){ newPhoto = url; });
+    });
+    document.getElementById('ef_sigFile').addEventListener('change', function(){
+      processImage(this.files[0], 5, 20, SIG_TARGET.w, SIG_TARGET.h,
+        document.getElementById('ef_sigNew'), document.getElementById('ei_sig'),
+        document.getElementById('ee_sig'), function(url){ newSig = url; });
+    });
 
     document.getElementById('editCancel').addEventListener('click', closeModal);
     document.getElementById('editSave').addEventListener('click', function(){ saveEdit(r, this); });
@@ -512,7 +585,10 @@
     btn.disabled = true;
     var label = btn.textContent;
     btn.textContent = '⏳ सहेज रहे हैं...';
-    api({ action: 'adminUpdate', applicationId: r.applicationId, updates: u })
+    var payload = { action: 'adminUpdate', applicationId: r.applicationId, updates: u };
+    if(newPhoto) payload.photo = newPhoto;       // only sent when the admin picked a new file
+    if(newSig) payload.signature = newSig;
+    api(payload)
       .then(function(result){
         btn.disabled = false; btn.textContent = label;
         if(!result.success){ toast('त्रुटि: ' + (result.error || 'सहेजा नहीं जा सका।')); return; }
