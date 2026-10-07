@@ -45,6 +45,9 @@ var ADMIN_PASSWORD_PROPERTY = 'ADMIN_PASSWORD';
 
 var TIMEZONE = 'Asia/Kolkata';
 
+// Shown in the admin dashboard header so you can confirm the NEW code is deployed.
+var BACKEND_VERSION = 'v4-2026-10-07';
+
 // Column order in the sheet (row 1 = headers, auto-created on first run).
 var HEADERS = [
   'applicationId', 'submittedAt', 'admClass', 'stream',
@@ -214,7 +217,7 @@ function handleAdminList_(body) {
   }
   records.reverse(); // newest first
 
-  return jsonOut_({ success: true, records: records });
+  return jsonOut_({ success: true, records: records, version: BACKEND_VERSION, sheet: SHEET_NAME });
 }
 
 // ---- Admin: delete one application by its sheet row number ----
@@ -222,28 +225,42 @@ function handleAdminDelete_(body) {
   if (!checkAdminPassword_(body.password)) {
     return jsonOut_({ success: false, error: 'Unauthorized' });
   }
-  var rowNum = parseInt(body.row, 10);
-  if (!rowNum || rowNum < 2) {
-    return jsonOut_({ success: false, error: 'Invalid row' });
+  var appId = String(body.applicationId || '').trim();
+  if (!appId) {
+    return jsonOut_({ success: false, error: 'applicationId missing' });
   }
 
   var lock = LockService.getScriptLock();
   lock.waitLock(10000);
   try {
     var sheet = getSheet_();
-    // Confirm the applicationId still matches before deleting, in case rows
-    // shifted between the admin loading the list and clicking delete.
-    var appIdCol = HEADERS.indexOf('applicationId') + 1;
-    var currentAppId = sheet.getRange(rowNum, appIdCol).getValue();
-    if (body.applicationId && String(currentAppId) !== String(body.applicationId)) {
-      return jsonOut_({ success: false, error: 'Row changed, please refresh and try again.' });
+    var col = HEADERS.indexOf('applicationId') + 1;
+
+    // Find EVERY row carrying this applicationId (by id, never by a stale row number).
+    var last = sheet.getLastRow();
+    var rows = [];
+    if (last >= 2) {
+      var vals = sheet.getRange(2, col, last - 1, 1).getValues();
+      for (var i = 0; i < vals.length; i++) {
+        if (String(vals[i][0]).trim() === appId) rows.push(i + 2);
+      }
     }
-    sheet.deleteRow(rowNum);
+    if (rows.length === 0) {
+      return jsonOut_({ success: false, error: 'Application sheet "' + SHEET_NAME + '" mein nahi mili (id: ' + appId + '). Refresh karke dekhein.' });
+    }
+
+    rows.sort(function (a, b) { return b - a; }); // bottom first
+    rows.forEach(function (r) { sheet.deleteRow(r); });
+    SpreadsheetApp.flush();
+
+    var still = findRowByAppId_(sheet, appId);
+    if (still) {
+      return jsonOut_({ success: false, error: 'Delete verify failed: row ' + still + ' abhi bhi maujood hai (sheet "' + SHEET_NAME + '"). Sheet mein is row par formula/protection to nahi?' });
+    }
+    return jsonOut_({ success: true, removedRows: rows, backend: BACKEND_VERSION });
   } finally {
     lock.releaseLock();
   }
-
-  return jsonOut_({ success: true });
 }
 
 // Finds the sheet row number (1-based) for an applicationId. Returns 0 if not found.
@@ -287,7 +304,20 @@ function handleAdminDeleteMultiple_(body) {
       }
       rowsToDelete.sort(function (a, b) { return b - a; }); // bottom first
       rowsToDelete.forEach(function (r) { sheet.deleteRow(r); });
+      SpreadsheetApp.flush();
       deleted = rowsToDelete.length;
+
+      // verify: none of the requested ids may remain in the sheet
+      var after = sheet.getLastRow();
+      var remaining = 0;
+      if (after >= 2) {
+        sheet.getRange(2, col, after - 1, 1).getValues().forEach(function (v) {
+          if (wanted[String(v[0])]) remaining++;
+        });
+      }
+      if (remaining > 0) {
+        return jsonOut_({ success: false, error: 'Delete verify failed: ' + remaining + ' application abhi bhi sheet mein maujood hain.' });
+      }
     }
   } finally {
     lock.releaseLock();

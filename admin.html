@@ -72,6 +72,7 @@
 <header>
   <h1>🔐 UHS CHOCHAHI CHHAPRA — Admissions Admin Dashboard</h1>
   <div id="headerRight" class="hidden">
+    <span id="backendVer" style="font-size:.74rem;opacity:.8;"></span>
     <button class="btn-secondary btn-sm" id="signOutBtn" style="margin-left:10px;">Log out</button>
   </div>
 </header>
@@ -289,6 +290,8 @@
         }
         document.getElementById('unauthMsg').classList.add('hidden');
         allRecords = result.records;
+        document.getElementById('backendVer').textContent =
+          result.version ? ('Backend: ' + result.version) : 'Backend: PURANA version ⚠️ (Code.gs redeploy karein)';
         // drop selections that no longer exist
         var ids = {};
         allRecords.forEach(function(r){ ids[r.applicationId] = true; });
@@ -602,18 +605,35 @@
       });
   }
 
+  // After a delete: drop the rows from the screen at once, then re-load from the
+  // server and warn loudly if the server still returns any of them.
+  function removeLocal(ids){
+    var s = {}; ids.forEach(function(id){ s[id] = true; delete selected[id]; });
+    allRecords = allRecords.filter(function(r){ return !s[r.applicationId]; });
+    renderTable();
+  }
+  function reloadAndVerify(ids){
+    var s = {}; ids.forEach(function(id){ s[id] = true; });
+    return loadApplications().then(function(){
+      var still = allRecords.filter(function(r){ return s[r.applicationId]; }).length;
+      if(still){
+        alert('चेतावनी: ' + still + ' आवेदन सर्वर पर अभी भी मौजूद है।\n\nCode.gs का नया version deploy करें (Deploy → Manage deployments → Edit → New version), फिर दोबारा कोशिश करें।');
+      }
+    });
+  }
+
   // ---------- Delete (single) ----------
   function deleteRecord(r){
     if(!confirm('क्या आप वाकई "' + r.studentName + '" (' + r.applicationId + ') का आवेदन स्थायी रूप से हटाना चाहते हैं?')) return;
     api({ action: 'adminDelete', row: r._row, applicationId: r.applicationId })
       .then(function(result){
         if(!result.success){
-          toast('त्रुटि: ' + (result.error || 'हटाया नहीं जा सका।'));
+          alert('हटाया नहीं जा सका:\n' + (result.error || 'अज्ञात त्रुटि'));
           return;
         }
-        delete selected[r.applicationId];
+        removeLocal([r.applicationId]);
         toast('आवेदन हटा दिया गया।');
-        loadApplications();
+        reloadAndVerify([r.applicationId]);
       })
       .catch(function(){ toast('नेटवर्क त्रुटि — हटाया नहीं जा सका।'); });
   }
@@ -628,10 +648,10 @@
       .then(function(result){
         if(btn){ btn.disabled = false; btn.textContent = label; }
         if(!result.success){ toast('त्रुटि: ' + (result.error || 'हटाया नहीं जा सका।')); return; }
-        ids.forEach(function(id){ delete selected[id]; });
         closeModal();
+        removeLocal(ids);
         toast(result.deleted + ' आवेदन हटा दिए गए' + (result.notFound ? ' (' + result.notFound + ' पहले से मौजूद नहीं थे)' : '') + '।');
-        loadApplications();
+        reloadAndVerify(ids);
       })
       .catch(function(){
         if(btn){ btn.disabled = false; btn.textContent = label; }
